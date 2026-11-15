@@ -107,7 +107,7 @@ async function readUser(request, env) {
     if (!valid) return null;
     const payload = JSON.parse(new TextDecoder().decode(fromBase64url(parts[1])));
     if (typeof payload.sub !== "string" || typeof payload.email !== "string" || payload.exp <= Math.floor(Date.now() / 1000)) return null;
-    // The signed token is the identity source; D1 keeps a shadow row for project foreign keys.
+    // D1 is the authority for credentials; the signed token carries the authenticated D1 identity.
     return { id: payload.sub, email: payload.email };
   } catch { return null; }
 }
