@@ -140,7 +140,7 @@ async function handleApi(request, env) {
       const name = typeof body.name === "string" ? body.name.trim() : "";
       const description = typeof body.description === "string" ? body.description.trim() : "";
       const slug = typeof body.slug === "string" ? body.slug.trim().toLowerCase() :
-        name.normalize("NFKD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
+        name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
       if (name.length < 2 || name.length > 80) return json({ error: "Project name must contain 2 to 80 characters." }, 400);
       if (!safeName(slug)) return json({ error: "Project slug may contain only letters, numbers, underscores and hyphens (max 64)." }, 400);
       if (description.length > 300) return json({ error: "Description must be 300 characters or fewer." }, 400);
