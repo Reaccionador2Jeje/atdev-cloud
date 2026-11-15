@@ -19,6 +19,17 @@ AtDev Cloud provides a self-hostable backend with authentication, REST endpoints
 
 Production account credentials are handled by a separate Node.js service backed by PostgreSQL. The Cloudflare Worker remains the public website/API gateway and signs session tokens after the private auth service verifies accounts. D1 keeps a minimal shadow user row for existing project foreign-key relationships; new passwords are stored only in PostgreSQL.
 
+### Deploy with Render + Neon (free-tier test setup)
+
+1. Create a PostgreSQL project in Neon and copy its pooled connection string.
+2. In Render, choose **New → Blueprint**, connect this repository and select `render.yaml`.
+3. When prompted, paste the Neon connection string into `DATABASE_URL`. Render generates `AUTH_SERVICE_TOKEN`.
+4. After Render finishes deploying, copy the service's HTTPS URL and generated `AUTH_SERVICE_TOKEN`.
+5. In Cloudflare Worker settings, add `AUTH_SERVICE_URL` (the Render HTTPS URL) and `AUTH_SERVICE_TOKEN` (the same generated value). Keep `JWT_SECRET` unchanged.
+6. Check `https://atdev-cloud.cristopheriguaran-7.workers.dev/v1/auth/status`; it should report `configured: true` and `connected: true`.
+
+This free-tier combination is for testing, not guaranteed production uptime: Render free web services sleep after 15 minutes without traffic and can take about a minute to wake; Neon free compute scales to zero after inactivity. Do not use it for important production accounts without a reliable hosting/backup plan.
+
 ### Start with Docker Compose
 
 ```sh
