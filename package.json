@@ -9,9 +9,12 @@
     "start": "node dist/server.js",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "node --test"
+    "test": "node --test",
+    "dev:all": "node scripts/dev-all.mjs"
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^11.8.1",
