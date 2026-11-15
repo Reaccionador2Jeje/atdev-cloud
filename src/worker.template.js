@@ -101,7 +101,7 @@ async function handleApi(request, env) {
   if (path === "/v1/auth/register" && method === "POST") {
     if (!env.JWT_SECRET || env.JWT_SECRET.length < 32) return json({ error: "Authentication is not configured. Set the JWT_SECRET Worker secret." }, 503);
     const body = await readJson(request);
-    if (typeof body.email !== "string" || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(body.email) || body.email.length > 254) return json({ error: "A valid email is required." }, 400);
+    if (typeof body.email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email) || body.email.length > 254) return json({ error: "A valid email is required." }, 400);
     if (typeof body.password !== "string" || body.password.length < 10 || body.password.length > 72) return json({ error: "Password must contain between 10 and 72 characters." }, 400);
     const email = body.email.trim().toLowerCase();
     if (env.AUTH_SERVICE_URL && env.AUTH_SERVICE_TOKEN) {
