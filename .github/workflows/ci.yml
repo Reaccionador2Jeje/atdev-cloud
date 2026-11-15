@@ -17,6 +17,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run build:worker
       - run: node --check dist/worker.mjs
-      - run: node --check auth-service/server.mjs
-      - run: docker build -t atdev-cloud-auth ./auth-service
+      - run: node --check scripts/finance-ledger.mjs
+      - run: node --check scripts/export-storage.mjs
+      - run: npm run finance:report
       - run: npm test
