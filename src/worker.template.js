@@ -290,7 +290,7 @@ async function handleApi(request, env) {
     }
 
 
-    const filesMatch = path.match(/^\/v1\/projects\/([a-zA-Z0-9_-]{1,64})\/files(?:\/([a-zA-Z0-9_-]{36}))?$/);
+    const filesMatch = path.match(/^\/v1\/projects\/([a-zA-Z0-9_-]{1,64})\/files(?:\/([0-9a-fA-F-]{36}))?$/);
     if (filesMatch) {
       if (!env.FILES) return json({ error: "AtDev Storage is not configured. Bind an R2 bucket as FILES." }, 503);
       const [, project, fileId] = filesMatch;
@@ -301,7 +301,7 @@ async function handleApi(request, env) {
 
       if (!fileId && method === "GET") {
         const cursor = url.searchParams.get("cursor") || undefined;
-        const page = await env.FILES.list({ prefix, cursor, limit: 100 });
+        const page = await env.FILES.list({ prefix, cursor, limit: 100, include: ["httpMetadata", "customMetadata"] });
         return json({
           files: page.objects.map(object => ({
             id: object.key.slice(prefix.length),
@@ -316,7 +316,7 @@ async function handleApi(request, env) {
 
       if (!fileId && method === "POST") {
         const contentLength = Number(request.headers.get("content-length") || 0);
-        if (contentLength > MAX_FILE_BYTES + 65536) return json({ error: "Upload limit is 10 MB per file." }, 413);
+        if (!contentLength) return json({ error: "Content-Length is required for uploads." }, 411);\n        if (contentLength > MAX_FILE_BYTES + 65536) return json({ error: "Upload limit is 10 MB per file." }, 413);
         const form = await request.formData();
         const file = form.get("file");
         if (!(file instanceof File)) return json({ error: "Multipart field 'file' is required." }, 400);
