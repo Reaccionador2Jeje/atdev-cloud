@@ -15,9 +15,34 @@ AtDev Cloud provides a self-hostable backend with authentication, REST endpoints
 - Project-scoped R2 file storage API with authenticated listing, upload, download and deletion (10 MB per file).
 - Health endpoint and environment-based configuration.
 
+## Authentication service (Node.js + PostgreSQL)
+
+Production account credentials are handled by a separate Node.js service backed by PostgreSQL. The Cloudflare Worker remains the public website/API gateway and signs session tokens after the private auth service verifies accounts. D1 keeps a minimal shadow user row for existing project foreign-key relationships; new passwords are stored only in PostgreSQL.
+
+### Start with Docker Compose
+
+```sh
+cp auth-service/.env.example .env
+# Edit .env and set two different random secrets.
+docker compose up -d --build
+```
+
+The auth container listens on port 8080. Keep it behind HTTPS and do not expose PostgreSQL publicly. For a remote deployment, deploy the `auth-service/` Docker image with a managed PostgreSQL database or a private Docker network. The Cloudflare Worker must be able to reach the auth service over HTTPS.
+
+Configure these Worker secrets:
+- `AUTH_SERVICE_URL`: public HTTPS base URL of the Node.js auth service.
+- `AUTH_SERVICE_TOKEN`: the same private token configured in the auth container.
+
+Keep the existing `JWT_SECRET` Worker secret unchanged. The Worker signs sessions, so the auth container does not need access to it.
+
+### Legacy account migration
+
+When a user signs in after the switch, the Worker first checks PostgreSQL. If the account exists only in the previous D1 authentication table, the Worker verifies the old password hash and imports the account into PostgreSQL using the same user ID. Existing project ownership is preserved.
+
 ## Requirements
 - Node.js 20+
 - npm
+- Docker Engine + Docker Compose (for the PostgreSQL auth service)
 
 ## Quick start
 ### Opción rápida: iniciar todo junto (requiere Node.js 20+, npm y Rust estable)
