@@ -19,6 +19,20 @@ AtDev Cloud provides a self-hostable backend with authentication, REST endpoints
 - npm
 
 ## Quick start
+### Opción rápida: iniciar todo junto (requiere Node.js 20+, npm y Rust estable)
+
+Clona ambos repositorios en carpetas hermanas (`atdev-cloud/` y `atdev-db/`). Desde `atdev-cloud/` ejecuta:
+
+```sh
+cp .env.example .env
+npm install
+npm run dev:all
+```
+
+Este comando inicia AtDev DB, espera a que su endpoint de salud responda y después inicia AtDev Cloud. Al presionar Ctrl+C se detienen ambos procesos. Si AtDev DB está en otra ruta, configura `ATDEV_DB_MANIFEST` con la ruta a su `Cargo.toml`.
+
+### Opción manual: iniciar los servicios por separado
+
 Start AtDev DB in one terminal (requires Rust stable):
 ```sh
 cd ../atdev-db
