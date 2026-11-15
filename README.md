@@ -102,6 +102,7 @@ Las cuentas creadas en el servidor local SQLite no se migran automáticamente a 
 
 ## API
 - `GET /health`
+- `GET /v1/auth/status` — reports whether the private PostgreSQL auth service is configured and reachable.
 - `POST /v1/auth/register` — `{ "email": "...", "password": "..." }`
 - `POST /v1/auth/login` — returns a bearer token
 - `GET /v1/auth/me` — requires `Authorization: Bearer <token>`
