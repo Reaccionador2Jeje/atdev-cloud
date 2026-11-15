@@ -143,9 +143,14 @@ async function handleApi(request, env) {
     if (!referenceId || referenceId.length > 128) return json({ error: "A valid reference_id is required." }, 400);
     if (!/^[a-zA-Z0-9._:-]{8,128}$/.test(idempotencyKey)) return json({ error: "A valid idempotency_key is required." }, 400);
 
-    const target = new URL(env.WALLETIE_URL);
-    if (target.protocol !== "https:" && !["localhost", "127.0.0.1"].includes(target.hostname)) {
-      return json({ error: "Walletie URL must use HTTPS." }, 503);
+    let target;
+    try {
+      target = new URL(env.WALLETIE_URL);
+    } catch {
+      return json({ error: "Walletie URL is invalid." }, 503);
+    }
+    if (target.username || target.password || (target.protocol !== "https:" && !["localhost", "127.0.0.1"].includes(target.hostname))) {
+      return json({ error: "Walletie URL must use HTTPS and must not contain embedded credentials." }, 503);
     }
     const endpoint = new URL("/internal/v1/credits", target);
     const grant = await fetch(endpoint, {
