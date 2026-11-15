@@ -2,63 +2,64 @@
 
 Open-source Backend-as-a-Service platform by AtDev Dev.
 
-AtDev Cloud provides a self-hostable backend with authentication, REST endpoints, file storage and database integration. The first alpha includes a browser dashboard and a native AtDev DB service integration.
+AtDev Cloud provides a browser dashboard, account registration/login, project APIs, JSON records, AtDev DB integration, and project-scoped file storage.
 
-## Features in 0.1.0-alpha
-- Email/password registration and login through a private Node.js + PostgreSQL auth service in production.
-- Bcrypt password hashing, signed bearer sessions and authenticated `/v1/auth/me` endpoint.
-- D1 user shadow rows for project ownership compatibility; local development retains SQLite.
-- Browser dashboard with registration, login, workspace overview, project management, API reference and AtDev DB SQL console.
-- Persistent owner-scoped projects stored in Cloudflare D1, with create, list, edit and delete operations.
-- Authenticated SQL proxy with per-user, per-project database isolation.
-- Project-scoped JSON record API.
-- Project-scoped R2 file storage API with authenticated listing, upload, download and deletion (10 MB per file).
-- Health endpoint and environment-based configuration.
+## Architecture
 
-## Authentication service (Node.js + PostgreSQL)
+- **Cloudflare Worker** serves the website and public API.
+- **Cloudflare D1 is the authoritative account database**: credentials and user identity live in the existing `users` table.
+- **D1** also stores project metadata and JSON records.
+- **Cloudflare R2** stores project files through authenticated Worker routes.
+- **AtDev DB** is an independent optional SQL service. The Worker proxies authenticated, owner-scoped requests to it.
+- Local development uses SQLite; production account records are stored in D1.
 
-Production account credentials are handled by a separate Node.js service backed by PostgreSQL. The Cloudflare Worker remains the public website/API gateway and signs session tokens after the private auth service verifies accounts. D1 keeps a minimal shadow user row for existing project foreign-key relationships; new passwords are stored only in PostgreSQL.
+No external PostgreSQL, Render, or Neon service is required for AtDev Cloud account registration or login.
 
-### Deploy with Render + Neon (free-tier test setup)
+## Account compatibility
 
-1. Create a PostgreSQL project in Neon and copy its pooled connection string.
-2. In Render, choose **New → Blueprint**, connect this repository and select `render.yaml`.
-3. When prompted, paste the Neon connection string into `DATABASE_URL`. Render generates `AUTH_SERVICE_TOKEN`.
-4. After Render finishes deploying, copy the service's HTTPS URL and generated `AUTH_SERVICE_TOKEN`.
-5. In Cloudflare Worker settings, add `AUTH_SERVICE_URL` (the Render HTTPS URL) and `AUTH_SERVICE_TOKEN` (the same generated value). Keep `JWT_SECRET` unchanged.
-6. Check `https://atdev-cloud.cristopheriguaran-7.workers.dev/v1/auth/status`; it should report `configured: true` and `connected: true`.
+The Worker uses the existing D1 `users` table and its `id`, `email`, `password_hash`, and `created_at` fields. Existing D1 accounts keep their IDs and password hashes, so their project ownership and existing PBKDF2 credentials remain valid. New registrations are written directly to D1 using PBKDF2-HMAC-SHA256 password hashes (210,000 iterations) with a random salt. The existing JWT signing secret remains the session-signing key.
 
-This free-tier combination is for testing, not guaranteed production uptime: Render free web services sleep after 15 minutes without traffic and can take about a minute to wake; Neon free compute scales to zero after inactivity. Do not use it for important production accounts without a reliable hosting/backup plan.
+The former optional PostgreSQL authentication service has been retired from the production path. Local SQLite accounts are separate development data and are not automatically imported into D1.
 
-### Start with Docker Compose
+## AtDev Storage
 
-```sh
-cp auth-service/.env.example .env
-# Edit .env and set two different random secrets.
-docker compose up -d --build
-```
+Bind a private R2 bucket named `atdev-cloud-files` as `FILES` in `wrangler.jsonc`.
 
-The auth container listens on port 8080. Keep it behind HTTPS and do not expose PostgreSQL publicly. For a remote deployment, deploy the `auth-service/` Docker image with a managed PostgreSQL database or a private Docker network. The Cloudflare Worker must be able to reach the auth service over HTTPS.
+Storage defaults enforced by the Worker:
 
-Configure these Worker secrets:
-- `AUTH_SERVICE_URL`: public HTTPS base URL of the Node.js auth service.
-- `AUTH_SERVICE_TOKEN`: the same private token configured in the auth container.
+| Limit | Default |
+|---|---:|
+| Maximum individual file | 10 MiB |
+| Maximum per project | 100 MiB |
+| Maximum per account | 500 MiB |
+| Maximum files per project | 500 |
 
-Keep the existing `JWT_SECRET` Worker secret unchanged. The Worker signs sessions, so the auth container does not need access to it. You can configure the URL and token with `npx wrangler secret put AUTH_SERVICE_URL --name atdev-cloud` and `npx wrangler secret put AUTH_SERVICE_TOKEN --name atdev-cloud` (or through the Worker settings panel).
+Usage is measured from R2 object listings before each upload. These are application-level guardrails; simultaneous uploads may briefly race, and Cloudflare account-level quotas still apply. The limits can be changed in `src/worker.template.js`.
 
-### Legacy account migration
+### Storage API
 
-When a user signs in after the switch, the Worker first checks PostgreSQL. If the account exists only in the previous D1 authentication table, the Worker verifies the old password hash and imports the account into PostgreSQL using the same user ID. Existing project ownership is preserved.
+- `GET /v1/projects/:project/files` — list files (cursor pagination).
+- `POST /v1/projects/:project/files` — upload multipart field `file`.
+- `GET /v1/projects/:project/files/:id` — download a file.
+- `DELETE /v1/projects/:project/files/:id` — delete a file.
+- `GET /v1/projects/:project/files/export` — download a JSON manifest containing file metadata and authenticated download paths. Download the listed files individually with the same bearer token.
 
-## Requirements
-- Node.js 20+
-- npm
-- Docker Engine + Docker Compose (for the PostgreSQL auth service)
+The Worker never exposes the R2 bucket publicly. Project ownership is checked before every storage operation.
 
-## Quick start
-### Opción rápida: iniciar todo junto (requiere Node.js 20+, npm y Rust estable)
+## AtDev DB integration
 
-Clona ambos repositorios en carpetas hermanas (`atdev-cloud/` y `atdev-db/`). Desde `atdev-cloud/` ejecuta:
+AtDev DB runs independently from the Worker. Configure Worker secrets:
+
+- `ATDEV_DB_URL`: HTTPS URL of a reverse proxy to the AtDev DB service.
+- `ATDEV_DB_TOKEN`: the same private bearer token configured on AtDev DB.
+
+The AtDev DB API requires a token for non-loopback deployments. Keep the database service behind HTTPS and a private network/reverse proxy. See the [AtDev DB repository](https://github.com/Reaccionador2Jeje/atdev-db).
+
+## Quick start: local development
+
+Requirements: Node.js 20+, npm, and Rust stable if using the AtDev DB service.
+
+Clone `atdev-cloud` and `atdev-db` into sibling folders. From `atdev-cloud`:
 
 ```sh
 cp .env.example .env
@@ -66,87 +67,62 @@ npm install
 npm run dev:all
 ```
 
-Este comando inicia AtDev DB, espera a que su endpoint de salud responda y después inicia AtDev Cloud. Al presionar Ctrl+C se detienen ambos procesos. Si AtDev DB está en otra ruta, configura `ATDEV_DB_MANIFEST` con la ruta a su `Cargo.toml`.
+Or run the services separately:
 
-### Opción manual: iniciar los servicios por separado
-
-Start AtDev DB in one terminal (requires Rust stable):
 ```sh
 cd ../atdev-db
 ATDEV_DB_BIND=127.0.0.1:8788 cargo run -- --server
 ```
 
-Then start AtDev Cloud in another terminal:
+Then in `atdev-cloud`:
+
 ```sh
 cp .env.example .env
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` to use the web dashboard. AtDev DB must remain on a private interface; the Cloud backend proxies authenticated SQL requests and gives each user a separate database per project. The API also listens on `http://localhost:3000`.
+Open `http://localhost:3000`.
 
-## Deploy en Cloudflare Workers
-
-El sitio y la API pública se ejecutan en un único Worker. En producción, las credenciales de cuenta se guardan en el servicio privado Node.js + PostgreSQL; D1 conserva los proyectos, registros y una fila mínima de identidad por usuario. El motor AtDev DB sigue siendo un servicio remoto independiente: para conectar el panel, configura el secreto `ATDEV_DB_URL` con la URL HTTPS pública de ese servicio. No uses una dirección localhost en producción.
-
-Requisitos: Node.js 20+, una cuenta de Cloudflare y Wrangler.
+## Deploy to Cloudflare Workers
 
 ```sh
 npm install
 npm run build:worker
 npx wrangler d1 migrations apply atdev-cloud-db --remote
-npx wrangler secret put JWT_SECRET --name atdev-cloud
 npm run deploy
 ```
 
-Para probar localmente con recursos de Cloudflare:
+Set `JWT_SECRET` as a Cloudflare Worker secret. Keep the current secret unchanged when upgrading, otherwise existing sessions will become invalid. The D1 database binding is defined in `wrangler.jsonc`.
 
-```sh
-npm run worker:dev
-```
-
-El sitio publicado está en [atdev-cloud.cristopheriguaran-7.workers.dev](https://atdev-cloud.cristopheriguaran-7.workers.dev). Tras el primer despliegue, configura el secreto `JWT_SECRET` desde **Workers & Pages → atdev-cloud → Settings → Variables and Secrets → Add → Secret** (o con el comando Wrangler anterior). Usa un valor aleatorio de al menos 32 caracteres; no lo publiques ni lo compartas.
-
-Para activar la consola AtDev DB después de alojar el servicio Rust en una URL HTTPS accesible, configura `ATDEV_DB_URL` como secreto del Worker. El motor Rust no se ejecuta dentro del runtime de Workers: sigue siendo un servicio remoto.
-
-Las cuentas creadas en el servidor local SQLite no se migran automáticamente a PostgreSQL; las cuentas antiguas guardadas en D1 sí se importan al iniciar sesión por primera vez. AtDev Storage usa un bucket privado R2 enlazado como `FILES`. Antes del despliegue, habilita R2 en el panel de Cloudflare y crea el bucket `atdev-cloud-files` (o usa el nombre configurado en `wrangler.jsonc`). El Worker solo entrega archivos a través de endpoints autenticados y organiza las claves por usuario y proyecto. Cada archivo está limitado a 10 MB.
+To enable storage, create the R2 bucket `atdev-cloud-files` in the same Cloudflare account and keep it private. The `FILES` binding is already declared in `wrangler.jsonc`.
 
 ## API
+
 - `GET /health`
-- `GET /v1/auth/status` — reports whether the private PostgreSQL auth service is configured and reachable.
-- `POST /v1/auth/register` — `{ "email": "...", "password": "..." }`
+- `GET /v1/auth/status`
+- `POST /v1/auth/register` — `{"email":"...","password":"..."}`
 - `POST /v1/auth/login` — returns a bearer token
-- `GET /v1/auth/me` — requires `Authorization: Bearer <token>`
-- `GET /v1/projects` — list the authenticated user's projects
-- `POST /v1/projects` — create `{ "name": "My app", "slug": "my-app", "description": "..." }`
-- `GET /v1/projects/:slug` — get one project
-- `PATCH /v1/projects/:slug` — update its name or description
-- `DELETE /v1/projects/:slug` — delete a project and its records
+- `GET /v1/auth/me` — requires a bearer token
+- `GET /v1/projects`
+- `POST /v1/projects`
+- `GET /v1/projects/:slug`
+- `PATCH /v1/projects/:slug`
+- `DELETE /v1/projects/:slug`
 - `GET /v1/projects/:project/records/:collection`
 - `POST /v1/projects/:project/records/:collection`
 - `GET /v1/projects/:project/records/:collection/:id`
 - `PATCH /v1/projects/:project/records/:collection/:id`
 - `DELETE /v1/projects/:project/records/:collection/:id`
-- `POST /v1/storage/upload` — multipart field `file`, requires a token
-- `GET /v1/storage/:filename`
 
-Record endpoints require a bearer token. A project and collection name may contain only letters, digits, underscores and hyphens.
+## Development checks
 
-## Configuration
-See [.env.example](.env.example). Set a long random `JWT_SECRET` before exposing the service to a network. Local storage and SQLite are development-friendly defaults, not a substitute for production backups and hardened deployment.
-
-## Development
 ```sh
 npm run typecheck
 npm test
+npm run build:worker
 ```
 
-## Roadmap
-- Native AtDev DB driver and connection pooling.
-- Project-level API keys and role-based access control.
-- Role-based access control and API keys.
-- S3-compatible storage adapter.
-- Migrations, realtime events and server functions.
-
 ## License
+
 MIT
