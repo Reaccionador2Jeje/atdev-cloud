@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AtDev public finance ledger entry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "date",
+    "type",
+    "category",
+    "amount",
+    "currency",
+    "status",
+    "project",
+    "description"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "type": {
+      "enum": [
+        "income",
+        "expense"
+      ]
+    },
+    "category": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 40
+    },
+    "amount": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "status": {
+      "enum": [
+        "confirmed",
+        "planned"
+      ]
+    },
+    "project": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 80
+    },
+    "description": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 240
+    },
+    "public_reference": {
+      "type": "string",
+      "format": "uri"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 300
+    }
+  }
+}
