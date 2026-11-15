@@ -28,7 +28,7 @@ function requireInternal(req, res, next) {
   next();
 }
 function validate(email, password) {
-  if (typeof email !== "string" || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 254) return "A valid email is required.";
+  if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return "A valid email is required.";
   if (typeof password !== "string" || password.length < 10 || Buffer.byteLength(password, "utf8") > 72) return "Password must contain at least 10 characters and no more than 72 UTF-8 bytes.";
   return null;
 }
