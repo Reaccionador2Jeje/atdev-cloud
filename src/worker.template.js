@@ -16,7 +16,7 @@ const fromBase64url = value => {
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const safeFileName = value => String(value || "file").normalize("NFKC")
-  .replace(/[\\/\\\\]/g, "_").replace(/[\\u0000-\\u001f\\u007f]/g, "")
+  .replace(/[\/\\]/g, "_").replace(/[\u0000-\u001f\u007f]/g, "")
   .replace(/[^a-zA-Z0-9._ -]/g, "_").trim().slice(0, 120) || "file";
 const storagePrefix = (userId, project) => "users/" + userId + "/projects/" + project + "/";
 async function deleteStoragePrefix(bucket, prefix) {
@@ -290,7 +290,7 @@ async function handleApi(request, env) {
     }
 
 
-    const filesMatch = path.match(/^\\/v1\\/projects\\/([a-zA-Z0-9_-]{1,64})\\/files(?:\\/([a-zA-Z0-9_-]{36}))?$/);
+    const filesMatch = path.match(/^\/v1\/projects\/([a-zA-Z0-9_-]{1,64})\/files(?:\/([a-zA-Z0-9_-]{36}))?$/);
     if (filesMatch) {
       if (!env.FILES) return json({ error: "AtDev Storage is not configured. Bind an R2 bucket as FILES." }, 503);
       const [, project, fileId] = filesMatch;
