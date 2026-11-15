@@ -119,6 +119,55 @@ async function handleApi(request, env) {
 
   if (path === "/health" && method === "GET") return json({ status: "ok", service: "atdev-cloud", runtime: "cloudflare-workers" });
 
+  // Trusted service bridge: AtDev Cloud validates the caller, then forwards a
+  // server-side reward grant to Walletie. Never expose this route to browser code.
+  if (path === "/internal/v1/walletie/grants" && method === "POST") {
+    const supplied = request.headers.get("x-atdev-rewards-token") || "";
+    const expected = env.ATDEV_REWARDS_TOKEN || "";
+    if (!expected || expected.length < 32 || !constantTimeEqual(supplied, expected)) {
+      return json({ error: "Service authorization required." }, 401);
+    }
+    if (!env.WALLETIE_URL || !env.WALLETIE_SERVICE_TOKEN || env.WALLETIE_SERVICE_TOKEN.length < 32) {
+      return json({ error: "Walletie service integration is not configured." }, 503);
+    }
+
+    const body = await readJson(request);
+    const ownerId = typeof body.owner_id === "string" ? body.owner_id.trim() : "";
+    const amount = body.amount;
+    const source = typeof body.source === "string" ? body.source.trim() : "";
+    const referenceId = typeof body.reference_id === "string" ? body.reference_id.trim() : "";
+    const idempotencyKey = typeof body.idempotency_key === "string" ? body.idempotency_key.trim() : "";
+    if (!ownerId || ownerId.length > 128) return json({ error: "A valid owner_id is required." }, 400);
+    if (!Number.isInteger(amount) || amount < 1 || amount > 100000) return json({ error: "amount must be an integer from 1 to 100000." }, 400);
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{2,63}$/.test(source)) return json({ error: "A valid source identifier is required." }, 400);
+    if (!referenceId || referenceId.length > 128) return json({ error: "A valid reference_id is required." }, 400);
+    if (!/^[a-zA-Z0-9._:-]{8,128}$/.test(idempotencyKey)) return json({ error: "A valid idempotency_key is required." }, 400);
+
+    const target = new URL(env.WALLETIE_URL);
+    if (target.protocol !== "https:" && !["localhost", "127.0.0.1"].includes(target.hostname)) {
+      return json({ error: "Walletie URL must use HTTPS." }, 503);
+    }
+    const endpoint = new URL("/internal/v1/credits", target);
+    const grant = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-walletie-service-token": env.WALLETIE_SERVICE_TOKEN
+      },
+      body: JSON.stringify({
+        owner_id: ownerId,
+        amount,
+        source,
+        reference_id: referenceId,
+        idempotency_key: idempotencyKey
+      })
+    });
+    const resultText = await grant.text();
+    let result;
+    try { result = JSON.parse(resultText); } catch { result = { error: "Walletie returned an invalid response." }; }
+    return json({ walletie: result }, grant.status);
+  }
+
   if (path === "/v1/auth/status" && method === "GET") {
     return json({ configured: true, connected: Boolean(env.DB), service: "cloudflare-d1", authority: "primary" });
   }
