@@ -131,3 +131,7 @@ npm run build:worker
 ## License
 
 MIT
+
+## Walletie virtual credits
+
+AtDev Cloud is the identity provider currently accepted by Walletie V1. The trusted credit-grant integration is not active yet. See [Walletie integration boundaries](docs/WALLETIE_INTEGRATION.md) before adding any reward flow.
