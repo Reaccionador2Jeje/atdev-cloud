@@ -49,7 +49,7 @@ function authServiceBase(env) {
   if (!hasUrl || !hasToken) throw Object.assign(new Error("PostgreSQL auth service configuration is incomplete."), { status: 503 });
   const url = new URL(env.AUTH_SERVICE_URL);
   if (url.protocol !== "https:") throw Object.assign(new Error("AUTH_SERVICE_URL must use HTTPS."), { status: 503 });
-  return url.toString().replace(/\\/+$/, "");
+  return url.toString().replace(/\/+$/, "");
 }
 
 async function passwordHash(password) {
