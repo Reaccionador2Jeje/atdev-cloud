@@ -4,7 +4,7 @@ import path from "node:path";
 import { config } from "./config.js";
 
 fs.mkdirSync(path.dirname(config.databasePath), { recursive: true });
-export const db = new Database(config.databasePath);
+export const db: Database.Database = new Database(config.databasePath);
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 
