@@ -108,6 +108,19 @@ async function handleApi(request, env) {
 
   if (path === "/health" && method === "GET") return json({ status: "ok", service: "atdev-cloud", runtime: "cloudflare-workers" });
 
+  if (path === "/v1/auth/status" && method === "GET") {
+    try {
+      const base = authServiceBase(env);
+      if (!base) return json({ configured: false, connected: false, service: "postgresql-auth" });
+      const response = await fetch(base + "/health", { signal: AbortSignal.timeout(3000) });
+      if (!response.ok) return json({ configured: true, connected: false, service: "postgresql-auth" });
+      const health = await response.json();
+      return json({ configured: true, connected: health.status === "ok" && health.database === "postgresql", service: "postgresql-auth" });
+    } catch {
+      return json({ configured: Boolean(env.AUTH_SERVICE_URL && env.AUTH_SERVICE_TOKEN), connected: false, service: "postgresql-auth" });
+    }
+  }
+
   if (path === "/v1/auth/register" && method === "POST") {
     if (!env.JWT_SECRET || env.JWT_SECRET.length < 32) return json({ error: "Authentication is not configured. Set the JWT_SECRET Worker secret." }, 503);
     const body = await readJson(request);
