@@ -134,4 +134,4 @@ MIT
 
 ## Walletie virtual credits
 
-AtDev Cloud is the identity provider currently accepted by Walletie V1. The trusted credit-grant integration is not active yet. See [Walletie integration boundaries](docs/WALLETIE_INTEGRATION.md) before adding any reward flow.
+AtDev Cloud is the identity provider currently accepted by Walletie V1. A trusted backend bridge is implemented at `POST /internal/v1/walletie/grants`; it authenticates reward-producing backends and forwards validated, idempotent grants to Walletie. Configure `ATDEV_REWARDS_TOKEN`, `WALLETIE_SERVICE_TOKEN`, and `WALLETIE_URL` as Worker secrets/variables before using it. The bridge does not validate product-specific reward events: each product backend must verify its event before requesting a grant. See [Walletie reward bridge](docs/WALLETIE_REWARD_BRIDGE.md) and [Walletie integration boundaries](docs/WALLETIE_INTEGRATION.md).
