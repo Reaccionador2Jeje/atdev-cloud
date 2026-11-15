@@ -306,7 +306,7 @@ async function handleApi(request, env) {
     }
 
 
-    const filesUsageMatch = path.match(/^\\/v1\\/projects\\/([a-zA-Z0-9_-]{1,64})\\/files\\/usage$/);
+    const filesUsageMatch = path.match(/^\/v1\/projects\/([a-zA-Z0-9_-]{1,64})\/files\/usage$/);
     if (filesUsageMatch && method === "GET") {
       if (!env.FILES) return json({ error: "AtDev Storage is not configured. Bind an R2 bucket as FILES." }, 503);
       const project = filesUsageMatch[1];
@@ -322,7 +322,7 @@ async function handleApi(request, env) {
       });
     }
 
-    const filesExportMatch = path.match(/^\\/v1\\/projects\\/([a-zA-Z0-9_-]{1,64})\\/files\\/export$/);
+    const filesExportMatch = path.match(/^\/v1\/projects\/([a-zA-Z0-9_-]{1,64})\/files\/export$/);
     if (filesExportMatch && method === "GET") {
       if (!env.FILES) return json({ error: "AtDev Storage is not configured. Bind an R2 bucket as FILES." }, 503);
       const project = filesExportMatch[1];
