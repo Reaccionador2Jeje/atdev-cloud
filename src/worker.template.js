@@ -316,7 +316,8 @@ async function handleApi(request, env) {
 
       if (!fileId && method === "POST") {
         const contentLength = Number(request.headers.get("content-length") || 0);
-        if (!contentLength) return json({ error: "Content-Length is required for uploads." }, 411);\n        if (contentLength > MAX_FILE_BYTES + 65536) return json({ error: "Upload limit is 10 MB per file." }, 413);
+        if (!contentLength) return json({ error: "Content-Length is required for uploads." }, 411);
+        if (contentLength > MAX_FILE_BYTES + 65536) return json({ error: "Upload limit is 10 MB per file." }, 413);
         const form = await request.formData();
         const file = form.get("file");
         if (!(file instanceof File)) return json({ error: "Multipart field 'file' is required." }, 400);
