@@ -24,7 +24,7 @@ main{max-width:1080px;margin:55px auto;padding:0 22px}.hero{margin-bottom:30px}.
 </section>
 <section id="workspace" class="workspace hidden">
 <aside class="panel side"><strong>Workspace</strong><small id="userEmail"></small><label class="field">Proyecto<input id="project" value="mi-proyecto" maxlength="64"></label><button class="secondary" id="logout">Cerrar sesión</button><p class="hint">Cada usuario tiene su propia base de datos por proyecto.</p></aside>
-<div class="panel editor"><div class="topline"><div><div class="eyebrow">Database console</div><h2>AtDev DB</h2></div><span class="status">● Integrado</span></div>
+<div class="panel editor"><div class="topline"><div><div class="eyebrow">Database console</div><h2>AtDev DB</h2></div><span id="databaseStatus" class="status">● Comprobando DB...</span></div>
 <p>Ejecuta SQL en tu base de datos. Los datos se guardan en el servicio AtDev DB.</p>
 <textarea id="sql" spellcheck="false">CREATE TABLE notas (id INTEGER, contenido TEXT);
 INSERT INTO notas VALUES (1, 'Hola desde AtDev Cloud');
@@ -36,7 +36,8 @@ SELECT * FROM notas;</textarea>
 </main>
 <script>
 const $=id=>document.getElementById(id);let token=localStorage.getItem("atdev_token")||"";let registering=false;
-function showWorkspace(user){$("auth").classList.add("hidden");$("workspace").classList.remove("hidden");$("userEmail").textContent=user.email||""}
+async function refreshDatabaseStatus(){const status=$("databaseStatus");try{const data=await api("/v1/database/status");status.textContent=data.connected?"● AtDev DB conectada":"● AtDev DB desconectada";status.style.color=data.connected?"var(--green)":"#ff9b9b"}catch{status.textContent="● Estado desconocido";status.style.color="#ff9b9b"}}
+function showWorkspace(user){$("auth").classList.add("hidden");$("workspace").classList.remove("hidden");$("userEmail").textContent=user.email||"";refreshDatabaseStatus()}
 function showAuth(){$("workspace").classList.add("hidden");$("auth").classList.remove("hidden")}
 async function api(url,options={}){const response=await fetch(url,{...options,headers:{"content-type":"application/json",...(token?{authorization:"Bearer "+token}:{}),...(options.headers||{})}});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Error de conexión");return data}
 $("toggleAuth").onclick=()=>{registering=!registering;$("authTitle").textContent=registering?"Crear cuenta":"Iniciar sesión";$("authDescription").textContent=registering?"Regístrate para crear tu espacio.":"Accede a tu espacio de desarrollo.";$("authSubmit").textContent=registering?"Registrarme":"Entrar";$("toggleAuth").textContent=registering?"Ya tengo cuenta":"Crear cuenta";$("password").autocomplete=registering?"new-password":"current-password";$("authMessage").textContent=""};
@@ -44,5 +45,6 @@ $("authSubmit").onclick=async()=>{const button=$("authSubmit");button.disabled=t
 $("logout").onclick=()=>{token="";localStorage.removeItem("atdev_token");showAuth()};
 $("runQuery").onclick=async()=>{const button=$("runQuery");button.disabled=true;$("output").textContent="Ejecutando...";$("output").classList.remove("error");try{const data=await api("/v1/database/query",{method:"POST",body:JSON.stringify({project:$("project").value,sql:$("sql").value})});$("output").textContent=data.result||"(consulta ejecutada)"}catch(e){$("output").textContent=e.message;$("output").classList.add("error")}finally{button.disabled=false}};
 $("clearOutput").onclick=()=>{$("output").textContent="";$("output").classList.remove("error")};
+setInterval(refreshDatabaseStatus,15000);
 if(token){api("/v1/auth/me").then(data=>showWorkspace(data.user)).catch(()=>{token="";localStorage.removeItem("atdev_token");showAuth()})}
 </script></body></html>
