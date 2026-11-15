@@ -98,6 +98,19 @@ app.delete("/v1/projects/:project/records/:collection/:id", requireAuth, (req, r
 });
 
 
+app.get("/v1/database/status", requireAuth, async (_req, res) => {
+  try {
+    const response = await fetch(`${config.atdevDbUrl}/health`, {
+      signal: AbortSignal.timeout(2500)
+    });
+    if (!response.ok) return res.json({ connected: false, service: "atdev-db" });
+    const health = await response.json() as { status?: string; service?: string };
+    return res.json({ connected: health.status === "ok", service: health.service ?? "atdev-db" });
+  } catch {
+    return res.json({ connected: false, service: "atdev-db" });
+  }
+});
+
 app.post("/v1/database/query", requireAuth, async (req, res) => {
   const project = req.body?.project;
   const sql = req.body?.sql;
