@@ -8,7 +8,8 @@ AtDev Cloud provides a self-hostable backend with authentication, REST endpoints
 - Email/password registration and login with bcrypt password hashing.
 - Signed bearer tokens and an authenticated `/v1/auth/me` endpoint.
 - SQLite-backed account/auth metadata.
-- Browser dashboard with registration, login and an integrated AtDev DB SQL console.
+- Browser dashboard with registration, login, workspace overview, project management, API reference and AtDev DB SQL console.
+- Persistent owner-scoped projects stored in Cloudflare D1, with create, list, edit and delete operations.
 - Authenticated SQL proxy with per-user, per-project database isolation.
 - Project-scoped JSON record API.
 - Local file storage with upload size limits and safe generated filenames.
@@ -79,6 +80,11 @@ Los usuarios creados en el servidor local SQLite no se migran automáticamente a
 - `POST /v1/auth/register` — `{ "email": "...", "password": "..." }`
 - `POST /v1/auth/login` — returns a bearer token
 - `GET /v1/auth/me` — requires `Authorization: Bearer <token>`
+- `GET /v1/projects` — list the authenticated user's projects
+- `POST /v1/projects` — create `{ "name": "My app", "slug": "my-app", "description": "..." }`
+- `GET /v1/projects/:slug` — get one project
+- `PATCH /v1/projects/:slug` — update its name or description
+- `DELETE /v1/projects/:slug` — delete a project and its records
 - `GET /v1/projects/:project/records/:collection`
 - `POST /v1/projects/:project/records/:collection`
 - `GET /v1/projects/:project/records/:collection/:id`
@@ -100,7 +106,7 @@ npm test
 
 ## Roadmap
 - Native AtDev DB driver and connection pooling.
-- Dashboard and project management.
+- Project-level API keys and role-based access control.
 - Role-based access control and API keys.
 - S3-compatible storage adapter.
 - Migrations, realtime events and server functions.
