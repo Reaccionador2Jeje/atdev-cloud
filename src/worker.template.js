@@ -128,6 +128,68 @@ async function handleApi(request, env) {
 
     if (path === "/v1/auth/me" && method === "GET") return json({ user });
 
+    if (path === "/v1/projects" && method === "GET") {
+      const result = await env.DB.prepare(
+        "SELECT id, slug, name, description, created_at, updated_at FROM projects WHERE owner_id = ? ORDER BY updated_at DESC"
+      ).bind(user.id).all();
+      return json({ projects: result.results });
+    }
+
+    if (path === "/v1/projects" && method === "POST") {
+      const body = await readJson(request);
+      const name = typeof body.name === "string" ? body.name.trim() : "";
+      const description = typeof body.description === "string" ? body.description.trim() : "";
+      const slug = typeof body.slug === "string" ? body.slug.trim().toLowerCase() :
+        name.normalize("NFKD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
+      if (name.length < 2 || name.length > 80) return json({ error: "Project name must contain 2 to 80 characters." }, 400);
+      if (!safeName(slug)) return json({ error: "Project slug may contain only letters, numbers, underscores and hyphens (max 64)." }, 400);
+      if (description.length > 300) return json({ error: "Description must be 300 characters or fewer." }, 400);
+      const now = new Date().toISOString();
+      const project = { id: crypto.randomUUID(), slug, name, description, created_at: now, updated_at: now };
+      try {
+        await env.DB.prepare("INSERT INTO projects (id, owner_id, slug, name, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+          .bind(project.id, user.id, slug, name, description, now, now).run();
+      } catch (error) {
+        if (String(error).includes("UNIQUE")) return json({ error: "A project with this slug already exists." }, 409);
+        throw error;
+      }
+      return json({ project }, 201);
+    }
+
+    const projectMatch = path.match(/^\\/v1\\/projects\\/([a-zA-Z0-9_-]{1,64})$/);
+    if (projectMatch) {
+      const slug = projectMatch[1];
+      if (method === "GET") {
+        const project = await env.DB.prepare("SELECT id, slug, name, description, created_at, updated_at FROM projects WHERE owner_id = ? AND slug = ?")
+          .bind(user.id, slug).first();
+        return project ? json({ project }) : json({ error: "Project not found." }, 404);
+      }
+      if (method === "PATCH") {
+        const body = await readJson(request);
+        const current = await env.DB.prepare("SELECT id, name, description FROM projects WHERE owner_id = ? AND slug = ?")
+          .bind(user.id, slug).first();
+        if (!current) return json({ error: "Project not found." }, 404);
+        const name = body.name === undefined ? current.name : (typeof body.name === "string" ? body.name.trim() : "");
+        const description = body.description === undefined ? current.description : (typeof body.description === "string" ? body.description.trim() : "");
+        if (name.length < 2 || name.length > 80) return json({ error: "Project name must contain 2 to 80 characters." }, 400);
+        if (description.length > 300) return json({ error: "Description must be 300 characters or fewer." }, 400);
+        const now = new Date().toISOString();
+        await env.DB.prepare("UPDATE projects SET name = ?, description = ?, updated_at = ? WHERE owner_id = ? AND slug = ?")
+          .bind(name, description, now, user.id, slug).run();
+        return json({ project: { id: current.id, slug, name, description, updated_at: now } });
+      }
+      if (method === "DELETE") {
+        const current = await env.DB.prepare("SELECT id FROM projects WHERE owner_id = ? AND slug = ?")
+          .bind(user.id, slug).first();
+        if (!current) return json({ error: "Project not found." }, 404);
+        await env.DB.batch([
+          env.DB.prepare("DELETE FROM records WHERE owner_id = ? AND project = ?").bind(user.id, slug),
+          env.DB.prepare("DELETE FROM projects WHERE owner_id = ? AND slug = ?").bind(user.id, slug)
+        ]);
+        return new Response(null, { status: 204 });
+      }
+    }
+
     if (path === "/v1/database/status" && method === "GET") {
       if (!env.ATDEV_DB_URL) return json({ configured: false, connected: false, service: "atdev-db" });
       try {
