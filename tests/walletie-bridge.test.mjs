@@ -38,6 +38,33 @@ test("validates reward grant payload before forwarding", async () => {
   assert.match((await response.json()).error, /amount/);
 });
 
+test("rejects malformed Walletie URLs without throwing", async () => {
+  const response = await worker.fetch(request({
+    owner_id: "user-123", amount: 15, source: "librecoding.lesson",
+    reference_id: "lesson-123", idempotency_key: "lesson-event-123"
+  }), {
+    ATDEV_REWARDS_TOKEN: "r".repeat(40),
+    WALLETIE_SERVICE_TOKEN: "w".repeat(40),
+    WALLETIE_URL: "not a URL"
+  });
+  assert.equal(response.status, 503);
+  assert.match((await response.json()).error, /invalid/);
+});
+
+test("rejects non-HTTPS Walletie URLs and embedded credentials", async () => {
+  for (const walletieUrl of ["http://walletie.example.com", "https://user:pass@walletie.example.com"]) {
+    const response = await worker.fetch(request({
+      owner_id: "user-123", amount: 15, source: "librecoding.lesson",
+      reference_id: "lesson-123", idempotency_key: "lesson-event-123"
+    }), {
+      ATDEV_REWARDS_TOKEN: "r".repeat(40),
+      WALLETIE_SERVICE_TOKEN: "w".repeat(40),
+      WALLETIE_URL: walletieUrl
+    });
+    assert.equal(response.status, 503);
+  }
+});
+
 test("forwards a validated grant to Walletie and preserves its status", async () => {
   const originalFetch = globalThis.fetch;
   let forwarded;
