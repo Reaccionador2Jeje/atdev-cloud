@@ -58,7 +58,7 @@ Requisitos: Node.js 20+, una cuenta de Cloudflare y Wrangler.
 npm install
 npm run build:worker
 npx wrangler d1 migrations apply atdev-cloud-db --remote
-npx wrangler secret put JWT_SECRET
+npx wrangler secret put JWT_SECRET --name atdev-cloud
 npm run deploy
 ```
 
@@ -67,6 +67,10 @@ Para probar localmente con recursos de Cloudflare:
 ```sh
 npm run worker:dev
 ```
+
+El sitio publicado está en [atdev-cloud.cristopheriguaran-7.workers.dev](https://atdev-cloud.cristopheriguaran-7.workers.dev). Tras el primer despliegue, configura el secreto `JWT_SECRET` desde **Workers & Pages → atdev-cloud → Settings → Variables and Secrets → Add → Secret** (o con el comando Wrangler anterior). Usa un valor aleatorio de al menos 32 caracteres; no lo publiques ni lo compartas.
+
+Para activar la consola AtDev DB después de alojar el servicio Rust en una URL HTTPS accesible, configura `ATDEV_DB_URL` como secreto del Worker. El motor Rust no se ejecuta dentro del runtime de Workers: sigue siendo un servicio remoto.
 
 Los usuarios creados en el servidor local SQLite no se migran automáticamente a D1. El almacenamiento de archivos aún necesita habilitar R2 en la cuenta y enlazar un bucket; el endpoint responde claramente que esta función todavía no está activada.
 
