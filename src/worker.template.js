@@ -15,6 +15,9 @@ const fromBase64url = value => {
 };
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_STORAGE_PROJECT_BYTES = 100 * 1024 * 1024;
+const MAX_STORAGE_USER_BYTES = 500 * 1024 * 1024;
+const MAX_STORAGE_PROJECT_FILES = 500;
 const safeFileName = value => String(value || "file").normalize("NFKC")
   .replace(/[\/\\]/g, "_").replace(/[\u0000-\u001f\u007f]/g, "")
   .replace(/[^a-zA-Z0-9._ -]/g, "_").trim().slice(0, 120) || "file";
@@ -27,6 +30,23 @@ async function deleteStoragePrefix(bucket, prefix) {
     cursor = page.truncated ? page.cursor : undefined;
   } while (cursor);
 }
+
+async function measureStorage(bucket, prefix) {
+  let cursor;
+  let bytes = 0;
+  let files = 0;
+  do {
+    const page = await bucket.list({ prefix, cursor, limit: 1000 });
+    for (const object of page.objects) {
+      bytes += object.size;
+      files += 1;
+      if (files > 10000) throw Object.assign(new Error("Storage inventory is too large to measure safely."), { status: 503 });
+    }
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
+  return { bytes, files };
+}
+
 
 const constantTimeEqual = (left, right) => {
   if (left.length !== right.length) return false;
@@ -42,15 +62,6 @@ async function readJson(request) {
   catch { throw Object.assign(new Error("Invalid JSON body."), { status: 400 }); }
 }
 
-function authServiceBase(env) {
-  const hasUrl = Boolean(env.AUTH_SERVICE_URL);
-  const hasToken = Boolean(env.AUTH_SERVICE_TOKEN);
-  if (!hasUrl && !hasToken) return null;
-  if (!hasUrl || !hasToken) throw Object.assign(new Error("PostgreSQL auth service configuration is incomplete."), { status: 503 });
-  const url = new URL(env.AUTH_SERVICE_URL);
-  if (url.protocol !== "https:") throw Object.assign(new Error("AUTH_SERVICE_URL must use HTTPS."), { status: 503 });
-  return url.toString().replace(/\/+$/, "");
-}
 
 async function passwordHash(password) {
   const iterations = 210000;
@@ -109,16 +120,7 @@ async function handleApi(request, env) {
   if (path === "/health" && method === "GET") return json({ status: "ok", service: "atdev-cloud", runtime: "cloudflare-workers" });
 
   if (path === "/v1/auth/status" && method === "GET") {
-    try {
-      const base = authServiceBase(env);
-      if (!base) return json({ configured: false, connected: false, service: "postgresql-auth" });
-      const response = await fetch(base + "/health", { signal: AbortSignal.timeout(3000) });
-      if (!response.ok) return json({ configured: true, connected: false, service: "postgresql-auth" });
-      const health = await response.json();
-      return json({ configured: true, connected: health.status === "ok" && health.database === "postgresql", service: "postgresql-auth" });
-    } catch {
-      return json({ configured: Boolean(env.AUTH_SERVICE_URL && env.AUTH_SERVICE_TOKEN), connected: false, service: "postgresql-auth" });
-    }
+    return json({ configured: true, connected: Boolean(env.DB), service: "cloudflare-d1", authority: "primary" });
   }
 
   if (path === "/v1/auth/register" && method === "POST") {
@@ -127,34 +129,6 @@ async function handleApi(request, env) {
     if (typeof body.email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email) || body.email.length > 254) return json({ error: "A valid email is required." }, 400);
     if (typeof body.password !== "string" || body.password.length < 10 || body.password.length > 72) return json({ error: "Password must contain between 10 and 72 characters." }, 400);
     const email = body.email.trim().toLowerCase();
-    const authBase = authServiceBase(env);
-    if (authBase) {
-      const user = { id: crypto.randomUUID(), email };
-      try {
-        await env.DB.prepare("INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)")
-          .bind(user.id, email, "external$postgres", new Date().toISOString()).run();
-      } catch (error) {
-        if (String(error).includes("UNIQUE")) return json({ error: "Email is already registered." }, 409);
-        throw error;
-      }
-      try {
-        const response = await fetch(authBase + "/internal/register", {
-          method: "POST",
-          headers: { "content-type": "application/json", authorization: "Bearer " + env.AUTH_SERVICE_TOKEN },
-          body: JSON.stringify({ ...user, password: body.password }),
-          signal: AbortSignal.timeout(8000)
-        });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id).run();
-          return json({ error: result.error || "Account service rejected registration." }, response.status);
-        }
-      } catch {
-        await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id).run();
-        return json({ error: "Account service unavailable. Please try again later." }, 503);
-      }
-      return json({ user, token: await signToken(user, env.JWT_SECRET) }, 201);
-    }
     const existing = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(email).first();
     if (existing) return json({ error: "Email is already registered." }, 409);
     const user = { id: crypto.randomUUID(), email };
@@ -174,38 +148,6 @@ async function handleApi(request, env) {
     const body = await readJson(request);
     if (typeof body.email !== "string" || typeof body.password !== "string") return json({ error: "Email and password are required." }, 400);
     const email = body.email.trim().toLowerCase();
-    const authBase = authServiceBase(env);
-    if (authBase) {
-      try {
-        let response = await fetch(authBase + "/internal/login", {
-          method: "POST",
-          headers: { "content-type": "application/json", authorization: "Bearer " + env.AUTH_SERVICE_TOKEN },
-          body: JSON.stringify({ email, password: body.password }),
-          signal: AbortSignal.timeout(8000)
-        });
-        let result = await response.json().catch(() => ({}));
-        if (!response.ok && response.status === 401) {
-          const legacy = await env.DB.prepare("SELECT id, email, password_hash FROM users WHERE email = ?").bind(email).first();
-          if (legacy && await verifyPassword(body.password, legacy.password_hash)) {
-            response = await fetch(authBase + "/internal/migrate", {
-              method: "POST",
-              headers: { "content-type": "application/json", authorization: "Bearer " + env.AUTH_SERVICE_TOKEN },
-              body: JSON.stringify({ id: legacy.id, email: legacy.email, password: body.password }),
-              signal: AbortSignal.timeout(8000)
-            });
-            result = await response.json().catch(() => ({}));
-          }
-        }
-        if (!response.ok) return json({ error: response.status === 401 ? "Invalid email or password." : (result.error || "Account service unavailable.") }, response.status === 401 ? 401 : response.status >= 500 ? 503 : response.status);
-        const user = result.user;
-        if (!user || typeof user.id !== "string" || typeof user.email !== "string") return json({ error: "Invalid response from account service." }, 502);
-        await env.DB.prepare("INSERT OR IGNORE INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)")
-          .bind(user.id, user.email, "external$postgres", new Date().toISOString()).run();
-        return json({ user, token: await signToken(user, env.JWT_SECRET) });
-      } catch {
-        return json({ error: "Account service unavailable. Please try again later." }, 503);
-      }
-    }
     const row = await env.DB.prepare("SELECT id, email, password_hash FROM users WHERE email = ?").bind(email).first();
     if (!row || !(await verifyPassword(body.password, row.password_hash))) return json({ error: "Invalid email or password." }, 401);
     const user = { id: row.id, email: row.email };
@@ -365,6 +307,52 @@ async function handleApi(request, env) {
     }
 
 
+    const filesExportMatch = path.match(/^\\/v1\\/projects\\/([a-zA-Z0-9_-]{1,64})\\/files\\/export$/);
+    if (filesExportMatch && method === "GET") {
+      if (!env.FILES) return json({ error: "AtDev Storage is not configured. Bind an R2 bucket as FILES." }, 503);
+      const project = filesExportMatch[1];
+      const projectRow = await env.DB.prepare("SELECT id FROM projects WHERE owner_id = ? AND slug = ?")
+        .bind(user.id, project).first();
+      if (!projectRow) return json({ error: "Project not found." }, 404);
+      const prefix = storagePrefix(user.id, project);
+      let cursor;
+      const files = [];
+      let totalBytes = 0;
+      do {
+        const page = await env.FILES.list({ prefix, cursor, limit: 500, include: ["httpMetadata", "customMetadata"] });
+        for (const object of page.objects) {
+          const id = object.key.slice(prefix.length);
+          files.push({
+            id,
+            name: object.customMetadata?.originalName || id,
+            size: object.size,
+            uploaded: object.uploaded,
+            contentType: object.httpMetadata?.contentType || "application/octet-stream",
+            download_path: "/v1/projects/" + project + "/files/" + id
+          });
+          totalBytes += object.size;
+        }
+        cursor = page.truncated ? page.cursor : undefined;
+      } while (cursor);
+      const manifest = {
+        format: "atdev-storage-manifest/v1",
+        exported_at: new Date().toISOString(),
+        project,
+        file_count: files.length,
+        total_bytes: totalBytes,
+        note: "This manifest exports metadata and authenticated download paths. Download each file separately using the same bearer token.",
+        files
+      };
+      return new Response(JSON.stringify(manifest, null, 2), {
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "content-disposition": "attachment; filename=\"" + project + "-storage-manifest.json\"",
+          "cache-control": "private, no-store",
+          "x-content-type-options": "nosniff"
+        }
+      });
+    }
+
     const filesMatch = path.match(/^\/v1\/projects\/([a-zA-Z0-9_-]{1,64})\/files(?:\/([0-9a-fA-F-]{36}))?$/);
     if (filesMatch) {
       if (!env.FILES) return json({ error: "AtDev Storage is not configured. Bind an R2 bucket as FILES." }, 503);
@@ -398,6 +386,17 @@ async function handleApi(request, env) {
         if (!(file instanceof File)) return json({ error: "Multipart field 'file' is required." }, 400);
         if (file.size < 1) return json({ error: "Empty files are not allowed." }, 400);
         if (file.size > MAX_FILE_BYTES) return json({ error: "Upload limit is 10 MB per file." }, 413);
+        const projectUsage = await measureStorage(env.FILES, prefix);
+        if (projectUsage.files >= MAX_STORAGE_PROJECT_FILES) {
+          return json({ error: "Project storage file limit reached (500 files)." }, 413);
+        }
+        if (projectUsage.bytes + file.size > MAX_STORAGE_PROJECT_BYTES) {
+          return json({ error: "Project storage quota exceeded (100 MB)." }, 413);
+        }
+        const userUsage = await measureStorage(env.FILES, "users/" + user.id + "/");
+        if (userUsage.bytes + file.size > MAX_STORAGE_USER_BYTES) {
+          return json({ error: "Account storage quota exceeded (500 MB)." }, 413);
+        }
         const id = crypto.randomUUID();
         const name = safeFileName(file.name);
         const key = prefix + id;
