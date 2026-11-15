@@ -43,7 +43,7 @@ Usage is measured from R2 object listings before each upload. These are applicat
 - `POST /v1/projects/:project/files` — upload multipart field `file`.
 - `GET /v1/projects/:project/files/:id` — download a file.
 - `DELETE /v1/projects/:project/files/:id` — delete a file.
-- `GET /v1/projects/:project/files/export` — download a JSON manifest containing file metadata and authenticated download paths. Download the listed files individually with the same bearer token.
+- `GET /v1/projects/:project/files/export` — download a JSON manifest containing file metadata and authenticated download paths. Download the listed files individually with the same bearer token. A local helper downloads the manifest and all files: set `ATDEV_CLOUD_URL` and `ATDEV_TOKEN`, then run `npm run storage:export -- my-project ./backup`.
 
 The Worker never exposes the R2 bucket publicly. Project ownership is checked before every storage operation.
 
@@ -115,6 +115,10 @@ To enable storage, create the R2 bucket `atdev-cloud-files` in the same Cloudfla
 - `GET /v1/projects/:project/records/:collection/:id`
 - `PATCH /v1/projects/:project/records/:collection/:id`
 - `DELETE /v1/projects/:project/records/:collection/:id`
+
+## AtDev Hybrid policy and finance transparency
+
+See [AtDev Hybrid Policy](docs/ATDEV_HYBRID_POLICY.md) and the [public finance ledger](finance/README.md). The ledger starts empty and records only actual confirmed transactions or clearly labeled plans. Run `npm run finance:report` to summarize it.
 
 ## Development checks
 
