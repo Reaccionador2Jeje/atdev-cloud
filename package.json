@@ -13,7 +13,9 @@
     "dev:all": "node scripts/dev-all.mjs",
     "build:worker": "node scripts/build-worker.mjs",
     "worker:dev": "npm run build:worker && wrangler dev",
-    "deploy": "npm run build:worker && wrangler deploy"
+    "deploy": "npm run build:worker && wrangler deploy",
+    "finance:report": "node scripts/finance-ledger.mjs report",
+    "finance:add": "node scripts/finance-ledger.mjs add"
   },
   "engines": {
     "node": ">=20"
