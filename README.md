@@ -48,6 +48,28 @@ npm run dev
 
 Open `http://localhost:3000` to use the web dashboard. AtDev DB must remain on a private interface; the Cloud backend proxies authenticated SQL requests and gives each user a separate database per project. The API also listens on `http://localhost:3000`.
 
+## Deploy en Cloudflare Workers
+
+El sitio y la API se ejecutan en un único Worker. La autenticación y las colecciones usan Cloudflare D1. El motor AtDev DB sigue siendo un servicio remoto independiente: para conectar el panel, configura el secreto `ATDEV_DB_URL` con la URL HTTPS pública de ese servicio. No uses una dirección localhost en producción.
+
+Requisitos: Node.js 20+, una cuenta de Cloudflare y Wrangler.
+
+```sh
+npm install
+npm run build:worker
+npx wrangler d1 migrations apply atdev-cloud-db --remote
+npx wrangler secret put JWT_SECRET
+npm run deploy
+```
+
+Para probar localmente con recursos de Cloudflare:
+
+```sh
+npm run worker:dev
+```
+
+Los usuarios creados en el servidor local SQLite no se migran automáticamente a D1. El almacenamiento de archivos aún necesita habilitar R2 en la cuenta y enlazar un bucket; el endpoint responde claramente que esta función todavía no está activada.
+
 ## API
 - `GET /health`
 - `POST /v1/auth/register` — `{ "email": "...", "password": "..." }`
