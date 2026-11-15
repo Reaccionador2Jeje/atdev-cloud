@@ -156,7 +156,7 @@ async function handleApi(request, env) {
       return json({ project }, 201);
     }
 
-    const projectMatch = path.match(/^\\/v1\\/projects\\/([a-zA-Z0-9_-]{1,64})$/);
+    const projectMatch = path.match(/^\/v1\/projects\/([a-zA-Z0-9_-]{1,64})$/);
     if (projectMatch) {
       const slug = projectMatch[1];
       if (method === "GET") {
