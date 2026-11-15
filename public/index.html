@@ -36,7 +36,7 @@ SELECT * FROM notas;</textarea>
 </main>
 <script>
 const $=id=>document.getElementById(id);let token=localStorage.getItem("atdev_token")||"";let registering=false;
-async function refreshDatabaseStatus(){const status=$("databaseStatus");try{const data=await api("/v1/database/status");status.textContent=data.connected?"● AtDev DB conectada":"● AtDev DB desconectada";status.style.color=data.connected?"var(--green)":"#ff9b9b"}catch{status.textContent="● Estado desconocido";status.style.color="#ff9b9b"}}
+async function refreshDatabaseStatus(){const status=$("databaseStatus");try{const data=await api("/v1/database/status");status.textContent=!data.configured?"● AtDev DB sin configurar":(data.connected?"● AtDev DB conectada":"● AtDev DB desconectada");status.style.color=data.connected?"var(--green)":"#ff9b9b"}catch{status.textContent="● Estado desconocido";status.style.color="#ff9b9b"}}
 function showWorkspace(user){$("auth").classList.add("hidden");$("workspace").classList.remove("hidden");$("userEmail").textContent=user.email||"";refreshDatabaseStatus()}
 function showAuth(){$("workspace").classList.add("hidden");$("auth").classList.remove("hidden")}
 async function api(url,options={}){const response=await fetch(url,{...options,headers:{"content-type":"application/json",...(token?{authorization:"Bearer "+token}:{}),...(options.headers||{})}});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Error de conexión");return data}
