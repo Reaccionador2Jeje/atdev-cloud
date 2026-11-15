@@ -15,7 +15,8 @@
     "worker:dev": "npm run build:worker && wrangler dev",
     "deploy": "npm run build:worker && wrangler deploy",
     "finance:report": "node scripts/finance-ledger.mjs report",
-    "finance:add": "node scripts/finance-ledger.mjs add"
+    "finance:add": "node scripts/finance-ledger.mjs add",
+    "storage:export": "node scripts/export-storage.mjs"
   },
   "engines": {
     "node": ">=20"
