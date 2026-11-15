@@ -52,7 +52,14 @@ app.get("/health", async (_req, res) => {
   try { await pool.query("SELECT 1"); res.json({ status: "ok", service: "atdev-cloud-auth", database: "postgresql" }); }
   catch { res.status(503).json({ status: "error", service: "atdev-cloud-auth", database: "unavailable" }); }
 });
-app.use("/internal", rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: "draft-7", legacyHeaders: false }), requireInternal);
+app.use("/internal", rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  // Cloudflare egress is shared by all users; key limits by account email, not Worker IP.
+  keyGenerator: req => typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "invalid-request"
+}), requireInternal);
 app.post("/internal/register", async (req, res, next) => {
   try {
     const result = await createAccount(req.body || {});
