@@ -7,7 +7,9 @@ AtDev Cloud provides a self-hostable backend with authentication, REST endpoints
 ## Features in 0.1.0-alpha
 - Email/password registration and login with bcrypt password hashing.
 - Signed bearer tokens and an authenticated `/v1/auth/me` endpoint.
-- SQLite development adapter with parameterized queries.
+- SQLite-backed account/auth metadata.
+- Browser dashboard with registration, login and an integrated AtDev DB SQL console.
+- Authenticated SQL proxy with per-user, per-project database isolation.
 - Project-scoped JSON record API.
 - Local file storage with upload size limits and safe generated filenames.
 - Health endpoint and environment-based configuration.
@@ -17,13 +19,20 @@ AtDev Cloud provides a self-hostable backend with authentication, REST endpoints
 - npm
 
 ## Quick start
+Start AtDev DB in one terminal (requires Rust stable):
+```sh
+cd ../atdev-db
+ATDEV_DB_BIND=127.0.0.1:8788 cargo run -- --server
+```
+
+Then start AtDev Cloud in another terminal:
 ```sh
 cp .env.example .env
 npm install
 npm run dev
 ```
 
-The API listens on `http://localhost:3000` by default.
+Open `http://localhost:3000` to use the web dashboard. AtDev DB must remain on a private interface; the Cloud backend proxies authenticated SQL requests and gives each user a separate database per project. The API also listens on `http://localhost:3000`.
 
 ## API
 - `GET /health`
