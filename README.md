@@ -12,7 +12,7 @@ AtDev Cloud provides a self-hostable backend with authentication, REST endpoints
 - Persistent owner-scoped projects stored in Cloudflare D1, with create, list, edit and delete operations.
 - Authenticated SQL proxy with per-user, per-project database isolation.
 - Project-scoped JSON record API.
-- Local file storage with upload size limits and safe generated filenames.
+- Project-scoped R2 file storage API with authenticated listing, upload, download and deletion (10 MB per file).
 - Health endpoint and environment-based configuration.
 
 ## Requirements
@@ -73,7 +73,7 @@ El sitio publicado está en [atdev-cloud.cristopheriguaran-7.workers.dev](https:
 
 Para activar la consola AtDev DB después de alojar el servicio Rust en una URL HTTPS accesible, configura `ATDEV_DB_URL` como secreto del Worker. El motor Rust no se ejecuta dentro del runtime de Workers: sigue siendo un servicio remoto.
 
-Los usuarios creados en el servidor local SQLite no se migran automáticamente a D1. El almacenamiento de archivos aún necesita habilitar R2 en la cuenta y enlazar un bucket; el endpoint responde claramente que esta función todavía no está activada.
+Los usuarios creados en el servidor local SQLite no se migran automáticamente a D1. AtDev Storage usa un bucket privado R2 enlazado como `FILES`. Antes del despliegue, habilita R2 en el panel de Cloudflare y crea el bucket `atdev-cloud-files` (o usa el nombre configurado en `wrangler.jsonc`). El Worker solo entrega archivos a través de endpoints autenticados y organiza las claves por usuario y proyecto. Cada archivo está limitado a 10 MB.
 
 ## API
 - `GET /health`
