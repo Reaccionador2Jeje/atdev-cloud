@@ -33,7 +33,7 @@ Configure these Worker secrets:
 - `AUTH_SERVICE_URL`: public HTTPS base URL of the Node.js auth service.
 - `AUTH_SERVICE_TOKEN`: the same private token configured in the auth container.
 
-Keep the existing `JWT_SECRET` Worker secret unchanged. The Worker signs sessions, so the auth container does not need access to it.
+Keep the existing `JWT_SECRET` Worker secret unchanged. The Worker signs sessions, so the auth container does not need access to it. You can configure the URL and token with `npx wrangler secret put AUTH_SERVICE_URL --name atdev-cloud` and `npx wrangler secret put AUTH_SERVICE_TOKEN --name atdev-cloud` (or through the Worker settings panel).
 
 ### Legacy account migration
 
@@ -98,7 +98,7 @@ El sitio publicado está en [atdev-cloud.cristopheriguaran-7.workers.dev](https:
 
 Para activar la consola AtDev DB después de alojar el servicio Rust en una URL HTTPS accesible, configura `ATDEV_DB_URL` como secreto del Worker. El motor Rust no se ejecuta dentro del runtime de Workers: sigue siendo un servicio remoto.
 
-Los usuarios creados en el servidor local SQLite no se migran automáticamente a D1. AtDev Storage usa un bucket privado R2 enlazado como `FILES`. Antes del despliegue, habilita R2 en el panel de Cloudflare y crea el bucket `atdev-cloud-files` (o usa el nombre configurado en `wrangler.jsonc`). El Worker solo entrega archivos a través de endpoints autenticados y organiza las claves por usuario y proyecto. Cada archivo está limitado a 10 MB.
+Las cuentas creadas en el servidor local SQLite no se migran automáticamente a PostgreSQL; las cuentas antiguas guardadas en D1 sí se importan al iniciar sesión por primera vez. AtDev Storage usa un bucket privado R2 enlazado como `FILES`. Antes del despliegue, habilita R2 en el panel de Cloudflare y crea el bucket `atdev-cloud-files` (o usa el nombre configurado en `wrangler.jsonc`). El Worker solo entrega archivos a través de endpoints autenticados y organiza las claves por usuario y proyecto. Cada archivo está limitado a 10 MB.
 
 ## API
 - `GET /health`
