@@ -242,11 +242,10 @@ async function handleApi(request, env) {
       if (typeof body.sql !== "string" || !body.sql.trim() || body.sql.length > 10000) {
         return json({ error: "SQL must contain between 1 and 10000 characters." }, 400);
       }
-      if (!env.ATDEV_DB_URL) return json({ error: "AtDev DB has not been connected to this Worker yet." }, 503);
+      if (!env.ATDEV_DB_URL || !env.ATDEV_DB_TOKEN || env.ATDEV_DB_TOKEN.length < 32) return json({ error: "AtDev DB requires an HTTPS URL and a bearer token of at least 32 characters." }, 503);
       try {
-        const base = env.ATDEV_DB_URL.replace(/\/+$/, "");
-        const headers = { "content-type": "application/json" };
-        if (env.ATDEV_DB_TOKEN) headers.authorization = "Bearer " + env.ATDEV_DB_TOKEN;
+        const base = env.ATDEV_DB_URL.replace(/\\/+$/, "");
+        const headers = { "content-type": "application/json", authorization: "Bearer " + env.ATDEV_DB_TOKEN };
         const response = await fetch(base + "/v1/query", {
           method: "POST", headers,
           body: JSON.stringify({ database: user.id.replace(/[^a-zA-Z0-9_-]/g, "_") + "_" + body.project, sql: body.sql })
@@ -306,6 +305,22 @@ async function handleApi(request, env) {
       }
     }
 
+
+    const filesUsageMatch = path.match(/^\\/v1\\/projects\\/([a-zA-Z0-9_-]{1,64})\\/files\\/usage$/);
+    if (filesUsageMatch && method === "GET") {
+      if (!env.FILES) return json({ error: "AtDev Storage is not configured. Bind an R2 bucket as FILES." }, 503);
+      const project = filesUsageMatch[1];
+      const projectRow = await env.DB.prepare("SELECT id FROM projects WHERE owner_id = ? AND slug = ?")
+        .bind(user.id, project).first();
+      if (!projectRow) return json({ error: "Project not found." }, 404);
+      const projectUsage = await measureStorage(env.FILES, storagePrefix(user.id, project));
+      const userUsage = await measureStorage(env.FILES, "users/" + user.id + "/");
+      return json({
+        project: { bytes_used: projectUsage.bytes, files_used: projectUsage.files, bytes_limit: MAX_STORAGE_PROJECT_BYTES, files_limit: MAX_STORAGE_PROJECT_FILES },
+        account: { bytes_used: userUsage.bytes, bytes_limit: MAX_STORAGE_USER_BYTES },
+        file_bytes_limit: MAX_FILE_BYTES
+      });
+    }
 
     const filesExportMatch = path.match(/^\\/v1\\/projects\\/([a-zA-Z0-9_-]{1,64})\\/files\\/export$/);
     if (filesExportMatch && method === "GET") {
