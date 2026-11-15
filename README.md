@@ -96,7 +96,7 @@ npm run deploy
 
 Set `JWT_SECRET` as a Cloudflare Worker secret. Keep the current secret unchanged when upgrading, otherwise existing sessions will become invalid. The D1 database binding is defined in `wrangler.jsonc`.
 
-To enable storage, create the R2 bucket `atdev-cloud-files` in the same Cloudflare account and keep it private. The `FILES` binding is already declared in `wrangler.jsonc`.
+Before deploying the R2 binding, enable R2 Object Storage in the Cloudflare Dashboard. Then create the private bucket `atdev-cloud-files` in the same account. The `FILES` binding is already declared in `wrangler.jsonc`.
 
 ## API
 
