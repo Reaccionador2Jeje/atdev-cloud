@@ -42,6 +42,16 @@ async function readJson(request) {
   catch { throw Object.assign(new Error("Invalid JSON body."), { status: 400 }); }
 }
 
+function authServiceBase(env) {
+  const hasUrl = Boolean(env.AUTH_SERVICE_URL);
+  const hasToken = Boolean(env.AUTH_SERVICE_TOKEN);
+  if (!hasUrl && !hasToken) return null;
+  if (!hasUrl || !hasToken) throw Object.assign(new Error("PostgreSQL auth service configuration is incomplete."), { status: 503 });
+  const url = new URL(env.AUTH_SERVICE_URL);
+  if (url.protocol !== "https:") throw Object.assign(new Error("AUTH_SERVICE_URL must use HTTPS."), { status: 503 });
+  return url.toString().replace(/\\/+$/, "");
+}
+
 async function passwordHash(password) {
   const iterations = 210000;
   const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -104,7 +114,8 @@ async function handleApi(request, env) {
     if (typeof body.email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email) || body.email.length > 254) return json({ error: "A valid email is required." }, 400);
     if (typeof body.password !== "string" || body.password.length < 10 || body.password.length > 72) return json({ error: "Password must contain between 10 and 72 characters." }, 400);
     const email = body.email.trim().toLowerCase();
-    if (env.AUTH_SERVICE_URL && env.AUTH_SERVICE_TOKEN) {
+    const authBase = authServiceBase(env);
+    if (authBase) {
       const user = { id: crypto.randomUUID(), email };
       try {
         await env.DB.prepare("INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)")
@@ -114,7 +125,7 @@ async function handleApi(request, env) {
         throw error;
       }
       try {
-        const response = await fetch(env.AUTH_SERVICE_URL.replace(/\\/+$/, "") + "/internal/register", {
+        const response = await fetch(authBase + "/internal/register", {
           method: "POST",
           headers: { "content-type": "application/json", authorization: "Bearer " + env.AUTH_SERVICE_TOKEN },
           body: JSON.stringify({ ...user, password: body.password }),
@@ -150,10 +161,10 @@ async function handleApi(request, env) {
     const body = await readJson(request);
     if (typeof body.email !== "string" || typeof body.password !== "string") return json({ error: "Email and password are required." }, 400);
     const email = body.email.trim().toLowerCase();
-    if (env.AUTH_SERVICE_URL && env.AUTH_SERVICE_TOKEN) {
+    const authBase = authServiceBase(env);
+    if (authBase) {
       try {
-        const base = env.AUTH_SERVICE_URL.replace(/\\/+$/, "");
-        let response = await fetch(base + "/internal/login", {
+        let response = await fetch(authBase + "/internal/login", {
           method: "POST",
           headers: { "content-type": "application/json", authorization: "Bearer " + env.AUTH_SERVICE_TOKEN },
           body: JSON.stringify({ email, password: body.password }),
@@ -163,7 +174,7 @@ async function handleApi(request, env) {
         if (!response.ok && response.status === 401) {
           const legacy = await env.DB.prepare("SELECT id, email, password_hash FROM users WHERE email = ?").bind(email).first();
           if (legacy && await verifyPassword(body.password, legacy.password_hash)) {
-            response = await fetch(base + "/internal/migrate", {
+            response = await fetch(authBase + "/internal/migrate", {
               method: "POST",
               headers: { "content-type": "application/json", authorization: "Bearer " + env.AUTH_SERVICE_TOKEN },
               body: JSON.stringify({ id: legacy.id, email: legacy.email, password: body.password }),
