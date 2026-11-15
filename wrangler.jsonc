@@ -19,6 +19,12 @@
       "head_sampling_rate": 1
     }
   },
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "atdev-cloud-files"
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
