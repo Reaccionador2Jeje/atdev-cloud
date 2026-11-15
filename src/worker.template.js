@@ -84,6 +84,7 @@ async function handleApi(request, env) {
   if (path === "/health" && method === "GET") return json({ status: "ok", service: "atdev-cloud", runtime: "cloudflare-workers" });
 
   if (path === "/v1/auth/register" && method === "POST") {
+    if (!env.JWT_SECRET || env.JWT_SECRET.length < 32) return json({ error: "Authentication is not configured. Set the JWT_SECRET Worker secret." }, 503);
     const body = await readJson(request);
     if (typeof body.email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email) || body.email.length > 254) {
       return json({ error: "A valid email is required." }, 400);
@@ -107,6 +108,7 @@ async function handleApi(request, env) {
   }
 
   if (path === "/v1/auth/login" && method === "POST") {
+    if (!env.JWT_SECRET || env.JWT_SECRET.length < 32) return json({ error: "Authentication is not configured. Set the JWT_SECRET Worker secret." }, 503);
     const body = await readJson(request);
     if (typeof body.email !== "string" || typeof body.password !== "string") {
       return json({ error: "Email and password are required." }, 400);
