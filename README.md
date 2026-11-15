@@ -39,6 +39,7 @@ Usage is measured from R2 object listings before each upload. These are applicat
 ### Storage API
 
 - `GET /v1/projects/:project/files` — list files (cursor pagination).
+- `GET /v1/projects/:project/files/usage` — show project/account usage and configured quotas.
 - `POST /v1/projects/:project/files` — upload multipart field `file`.
 - `GET /v1/projects/:project/files/:id` — download a file.
 - `DELETE /v1/projects/:project/files/:id` — delete a file.
@@ -51,7 +52,7 @@ The Worker never exposes the R2 bucket publicly. Project ownership is checked be
 AtDev DB runs independently from the Worker. Configure Worker secrets:
 
 - `ATDEV_DB_URL`: HTTPS URL of a reverse proxy to the AtDev DB service.
-- `ATDEV_DB_TOKEN`: the same private bearer token configured on AtDev DB.
+- `ATDEV_DB_TOKEN`: the same private bearer token (at least 32 characters) configured on AtDev DB.
 
 The AtDev DB API requires a token for non-loopback deployments. Keep the database service behind HTTPS and a private network/reverse proxy. See the [AtDev DB repository](https://github.com/Reaccionador2Jeje/atdev-db).
 
@@ -71,7 +72,7 @@ Or run the services separately:
 
 ```sh
 cd ../atdev-db
-ATDEV_DB_BIND=127.0.0.1:8788 cargo run -- --server
+ATDEV_DB_BIND=127.0.0.1:8788 ATDEV_DB_TOKEN=your-long-random-token cargo run -- --server
 ```
 
 Then in `atdev-cloud`:
