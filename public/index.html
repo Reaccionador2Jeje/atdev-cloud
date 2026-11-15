@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090d18"><title>AtDev Cloud</title>
+<style>
+:root{color-scheme:dark;--bg:#090d18;--panel:#111a2b;--line:#26344b;--muted:#9aabc4;--text:#eef4ff;--blue:#6ea8fe;--green:#5de0b0}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0%,#17294a 0,transparent 35%),var(--bg);color:var(--text);font:15px Inter,system-ui,sans-serif;min-height:100vh}
+header{height:72px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 max(5vw,22px);background:#090d18cc}
+.brand{font-size:21px;font-weight:800;letter-spacing:-.7px}.brand span{color:var(--blue)}.status{font-size:12px;color:var(--green)}
+main{max-width:1080px;margin:55px auto;padding:0 22px}.hero{margin-bottom:30px}.eyebrow{color:var(--blue);font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{font-size:clamp(32px,6vw,54px);letter-spacing:-2px;margin:12px 0}p{color:var(--muted);line-height:1.6}
+.panel{background:linear-gradient(145deg,#141f33,#0e1625);border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 18px 70px #0004}.auth{max-width:460px}.row{display:flex;gap:12px;flex-wrap:wrap}.field{display:block;width:100%;margin:13px 0;color:var(--muted);font-size:13px}input,textarea{display:block;width:100%;margin-top:7px;background:#080f1c;border:1px solid var(--line);border-radius:9px;padding:12px;color:var(--text);font:inherit;outline:none}input:focus,textarea:focus{border-color:var(--blue)}button{border:0;border-radius:9px;padding:11px 16px;background:var(--blue);color:#081326;font-weight:750;cursor:pointer}button.secondary{background:#25344d;color:var(--text)}button:disabled{opacity:.5;cursor:wait}.hidden{display:none!important}.workspace{display:grid;grid-template-columns:240px 1fr;gap:18px}.side{align-self:start}.side strong{display:block;margin-bottom:8px}.side small{color:var(--muted)}.editor textarea{min-height:190px;resize:vertical;font-family:ui-monospace,monospace}.output{margin-top:16px;padding:15px;background:#070d17;border:1px solid var(--line);border-radius:10px;white-space:pre-wrap;overflow:auto;min-height:70px;color:#c9d8ed;font:13px ui-monospace,monospace}.error{color:#ff9b9b}.hint{font-size:12px;margin-top:15px}.topline{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+@media(max-width:700px){main{margin:30px auto}.workspace{grid-template-columns:1fr}.panel{padding:18px}}
+</style></head>
+<body>
+<header><div class="brand">AtDev <span>Cloud</span></div><div class="status">● Plataforma alpha</div></header>
+<main>
+<section class="hero"><div class="eyebrow">AtDev Dev · Open source</div><h1>Tu backend.<br>Tu espacio.</h1><p>Gestiona tus proyectos y trabaja con AtDev DB desde un solo panel.</p></section>
+<section id="auth" class="panel auth">
+<h2 id="authTitle">Iniciar sesión</h2><p id="authDescription">Accede a tu espacio de desarrollo.</p>
+<label class="field">Correo electrónico<input id="email" type="email" autocomplete="email" placeholder="tu@correo.com"></label>
+<label class="field">Contraseña<input id="password" type="password" autocomplete="current-password" placeholder="Mínimo 10 caracteres"></label>
+<div class="row"><button id="authSubmit">Entrar</button><button class="secondary" id="toggleAuth">Crear cuenta</button></div><p id="authMessage" class="hint"></p>
+</section>
+<section id="workspace" class="workspace hidden">
+<aside class="panel side"><strong>Workspace</strong><small id="userEmail"></small><label class="field">Proyecto<input id="project" value="mi-proyecto" maxlength="64"></label><button class="secondary" id="logout">Cerrar sesión</button><p class="hint">Cada usuario tiene su propia base de datos por proyecto.</p></aside>
+<div class="panel editor"><div class="topline"><div><div class="eyebrow">Database console</div><h2>AtDev DB</h2></div><span class="status">● Integrado</span></div>
+<p>Ejecuta SQL en tu base de datos. Los datos se guardan en el servicio AtDev DB.</p>
+<textarea id="sql" spellcheck="false">CREATE TABLE notas (id INTEGER, contenido TEXT);
+INSERT INTO notas VALUES (1, 'Hola desde AtDev Cloud');
+SELECT * FROM notas;</textarea>
+<div class="row"><button id="runQuery">Ejecutar SQL</button><button class="secondary" id="clearOutput">Limpiar resultado</button></div>
+<pre id="output" class="output">Listo. Ejecuta una consulta para comenzar.</pre>
+<p class="hint">AtDev DB alpha: dialecto SQL experimental. No usar todavía para datos críticos.</p>
+</div></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);let token=localStorage.getItem("atdev_token")||"";let registering=false;
+function showWorkspace(user){$("auth").classList.add("hidden");$("workspace").classList.remove("hidden");$("userEmail").textContent=user.email||""}
+function showAuth(){$("workspace").classList.add("hidden");$("auth").classList.remove("hidden")}
+async function api(url,options={}){const response=await fetch(url,{...options,headers:{"content-type":"application/json",...(token?{authorization:"Bearer "+token}:{}),...(options.headers||{})}});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Error de conexión");return data}
+$("toggleAuth").onclick=()=>{registering=!registering;$("authTitle").textContent=registering?"Crear cuenta":"Iniciar sesión";$("authDescription").textContent=registering?"Regístrate para crear tu espacio.":"Accede a tu espacio de desarrollo.";$("authSubmit").textContent=registering?"Registrarme":"Entrar";$("toggleAuth").textContent=registering?"Ya tengo cuenta":"Crear cuenta";$("password").autocomplete=registering?"new-password":"current-password";$("authMessage").textContent=""};
+$("authSubmit").onclick=async()=>{const button=$("authSubmit");button.disabled=true;$("authMessage").textContent="Conectando...";try{const data=await api(registering?"/v1/auth/register":"/v1/auth/login",{method:"POST",body:JSON.stringify({email:$("email").value,password:$("password").value})});token=data.token;localStorage.setItem("atdev_token",token);showWorkspace(data.user)}catch(e){$("authMessage").textContent=e.message;$("authMessage").className="hint error"}finally{button.disabled=false}};
+$("logout").onclick=()=>{token="";localStorage.removeItem("atdev_token");showAuth()};
+$("runQuery").onclick=async()=>{const button=$("runQuery");button.disabled=true;$("output").textContent="Ejecutando...";$("output").classList.remove("error");try{const data=await api("/v1/database/query",{method:"POST",body:JSON.stringify({project:$("project").value,sql:$("sql").value})});$("output").textContent=data.result||"(consulta ejecutada)"}catch(e){$("output").textContent=e.message;$("output").classList.add("error")}finally{button.disabled=false}};
+$("clearOutput").onclick=()=>{$("output").textContent="";$("output").classList.remove("error")};
+if(token){api("/v1/auth/me").then(data=>showWorkspace(data.user)).catch(()=>{token="";localStorage.removeItem("atdev_token");showAuth()})}
+</script></body></html>
