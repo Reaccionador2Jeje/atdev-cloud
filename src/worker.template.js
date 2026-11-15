@@ -244,7 +244,11 @@ async function handleApi(request, env) {
       }
       if (!env.ATDEV_DB_URL || !env.ATDEV_DB_TOKEN || env.ATDEV_DB_TOKEN.length < 32) return json({ error: "AtDev DB requires an HTTPS URL and a bearer token of at least 32 characters." }, 503);
       try {
-        const base = env.ATDEV_DB_URL.replace(/\\/+$/, "");
+        const databaseUrl = new URL(env.ATDEV_DB_URL);
+        if (databaseUrl.protocol !== "https:" && !["localhost", "127.0.0.1"].includes(databaseUrl.hostname)) {
+          return json({ error: "AtDev DB must use HTTPS outside local development." }, 503);
+        }
+        const base = databaseUrl.toString().replace(/\\/+$/, "");
         const headers = { "content-type": "application/json", authorization: "Bearer " + env.ATDEV_DB_TOKEN };
         const response = await fetch(base + "/v1/query", {
           method: "POST", headers,
