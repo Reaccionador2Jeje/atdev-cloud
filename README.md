@@ -5,9 +5,9 @@ Open-source Backend-as-a-Service platform by AtDev Dev.
 AtDev Cloud provides a self-hostable backend with authentication, REST endpoints, file storage and database integration. The first alpha includes a browser dashboard and a native AtDev DB service integration.
 
 ## Features in 0.1.0-alpha
-- Email/password registration and login with bcrypt password hashing.
-- Signed bearer tokens and an authenticated `/v1/auth/me` endpoint.
-- SQLite-backed account/auth metadata.
+- Email/password registration and login through a private Node.js + PostgreSQL auth service in production.
+- Bcrypt password hashing, signed bearer sessions and authenticated `/v1/auth/me` endpoint.
+- D1 user shadow rows for project ownership compatibility; local development retains SQLite.
 - Browser dashboard with registration, login, workspace overview, project management, API reference and AtDev DB SQL console.
 - Persistent owner-scoped projects stored in Cloudflare D1, with create, list, edit and delete operations.
 - Authenticated SQL proxy with per-user, per-project database isolation.
@@ -76,7 +76,7 @@ Open `http://localhost:3000` to use the web dashboard. AtDev DB must remain on a
 
 ## Deploy en Cloudflare Workers
 
-El sitio y la API se ejecutan en un único Worker. La autenticación y las colecciones usan Cloudflare D1. El motor AtDev DB sigue siendo un servicio remoto independiente: para conectar el panel, configura el secreto `ATDEV_DB_URL` con la URL HTTPS pública de ese servicio. No uses una dirección localhost en producción.
+El sitio y la API pública se ejecutan en un único Worker. En producción, las credenciales de cuenta se guardan en el servicio privado Node.js + PostgreSQL; D1 conserva los proyectos, registros y una fila mínima de identidad por usuario. El motor AtDev DB sigue siendo un servicio remoto independiente: para conectar el panel, configura el secreto `ATDEV_DB_URL` con la URL HTTPS pública de ese servicio. No uses una dirección localhost en producción.
 
 Requisitos: Node.js 20+, una cuenta de Cloudflare y Wrangler.
 
