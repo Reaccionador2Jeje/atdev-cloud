@@ -27,6 +27,8 @@ const upload = multer({
 });
 
 const safeName = (value: string) => /^[a-zA-Z0-9_-]{1,64}$/.test(value);
+const routeParam = (value: string | string[] | undefined): string =>
+  typeof value === "string" ? value : "";
 const records = {
   list: db.prepare("SELECT id, data, created_at, updated_at FROM records WHERE owner_id=? AND project=? AND collection=? ORDER BY created_at DESC LIMIT 500"),
   get: db.prepare("SELECT id, data, created_at, updated_at FROM records WHERE owner_id=? AND project=? AND collection=? AND id=?"),
@@ -54,14 +56,16 @@ app.post("/v1/auth/login", async (req, res, next) => {
 app.get("/v1/auth/me", requireAuth, (req, res) => res.json({ user: req.user }));
 
 app.get("/v1/projects/:project/records/:collection", requireAuth, (req, res) => {
-  const { project, collection } = req.params;
+  const project = routeParam(req.params.project);
+  const collection = routeParam(req.params.collection);
   if (!safeName(project) || !safeName(collection)) return res.status(400).json({ error: "Invalid project or collection name." });
   const rows = records.list.all(req.user!.id, project, collection) as Array<{id:string;data:string;created_at:string;updated_at:string}>;
   res.json({ data: rows.map(row => ({ id: row.id, ...JSON.parse(row.data), created_at: row.created_at, updated_at: row.updated_at })) });
 });
 
 app.post("/v1/projects/:project/records/:collection", requireAuth, (req, res) => {
-  const { project, collection } = req.params;
+  const project = routeParam(req.params.project);
+  const collection = routeParam(req.params.collection);
   if (!safeName(project) || !safeName(collection)) return res.status(400).json({ error: "Invalid project or collection name." });
   if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) return res.status(400).json({ error: "A JSON object is required." });
   const now = new Date().toISOString();
@@ -71,7 +75,9 @@ app.post("/v1/projects/:project/records/:collection", requireAuth, (req, res) =>
 });
 
 app.get("/v1/projects/:project/records/:collection/:id", requireAuth, (req, res) => {
-  const { project, collection, id } = req.params;
+  const project = routeParam(req.params.project);
+  const collection = routeParam(req.params.collection);
+  const id = routeParam(req.params.id);
   if (!safeName(project) || !safeName(collection)) return res.status(400).json({ error: "Invalid project or collection name." });
   const row = records.get.get(req.user!.id, project, collection, id) as {id:string;data:string;created_at:string;updated_at:string} | undefined;
   if (!row) return res.status(404).json({ error: "Record not found." });
@@ -79,7 +85,9 @@ app.get("/v1/projects/:project/records/:collection/:id", requireAuth, (req, res)
 });
 
 app.patch("/v1/projects/:project/records/:collection/:id", requireAuth, (req, res) => {
-  const { project, collection, id } = req.params;
+  const project = routeParam(req.params.project);
+  const collection = routeParam(req.params.collection);
+  const id = routeParam(req.params.id);
   if (!safeName(project) || !safeName(collection)) return res.status(400).json({ error: "Invalid project or collection name." });
   if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) return res.status(400).json({ error: "A JSON object is required." });
   const old = records.get.get(req.user!.id, project, collection, id) as {data:string} | undefined;
@@ -90,7 +98,9 @@ app.patch("/v1/projects/:project/records/:collection/:id", requireAuth, (req, re
 });
 
 app.delete("/v1/projects/:project/records/:collection/:id", requireAuth, (req, res) => {
-  const { project, collection, id } = req.params;
+  const project = routeParam(req.params.project);
+  const collection = routeParam(req.params.collection);
+  const id = routeParam(req.params.id);
   if (!safeName(project) || !safeName(collection)) return res.status(400).json({ error: "Invalid project or collection name." });
   const result = records.delete.run(req.user!.id, project, collection, id);
   if (!result.changes) return res.status(404).json({ error: "Record not found." });
@@ -141,8 +151,9 @@ app.post("/v1/storage/upload", requireAuth, upload.single("file"), (req, res) =>
 });
 
 app.get("/v1/storage/:filename", (req, res) => {
-  if (!/^[a-f0-9-]{36}(\.[a-zA-Z0-9]{1,12})?$/.test(req.params.filename)) return res.status(400).json({ error: "Invalid filename." });
-  const filePath = path.join(config.storagePath, req.params.filename);
+  const filename = routeParam(req.params.filename);
+  if (!/^[a-f0-9-]{36}(\.[a-zA-Z0-9]{1,12})?$/.test(filename)) return res.status(400).json({ error: "Invalid filename." });
+  const filePath = path.join(config.storagePath, filename);
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File not found." });
   res.sendFile(filePath);
 });
