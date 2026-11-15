@@ -13,6 +13,21 @@ const fromBase64url = value => {
   const binary = atob(normalized + "=".repeat((4 - normalized.length % 4) % 4));
   return Uint8Array.from(binary, char => char.charCodeAt(0));
 };
+
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const safeFileName = value => String(value || "file").normalize("NFKC")
+  .replace(/[\\/\\\\]/g, "_").replace(/[\\u0000-\\u001f\\u007f]/g, "")
+  .replace(/[^a-zA-Z0-9._ -]/g, "_").trim().slice(0, 120) || "file";
+const storagePrefix = (userId, project) => "users/" + userId + "/projects/" + project + "/";
+async function deleteStoragePrefix(bucket, prefix) {
+  let cursor;
+  do {
+    const page = await bucket.list({ prefix, cursor, limit: 1000 });
+    if (page.objects.length) await bucket.delete(page.objects.map(object => object.key));
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
+}
+
 const constantTimeEqual = (left, right) => {
   if (left.length !== right.length) return false;
   let difference = 0;
@@ -182,6 +197,7 @@ async function handleApi(request, env) {
         const current = await env.DB.prepare("SELECT id FROM projects WHERE owner_id = ? AND slug = ?")
           .bind(user.id, slug).first();
         if (!current) return json({ error: "Project not found." }, 404);
+        if (env.FILES) await deleteStoragePrefix(env.FILES, storagePrefix(user.id, slug));
         await env.DB.batch([
           env.DB.prepare("DELETE FROM records WHERE owner_id = ? AND project = ?").bind(user.id, slug),
           env.DB.prepare("DELETE FROM projects WHERE owner_id = ? AND slug = ?").bind(user.id, slug)
@@ -273,9 +289,75 @@ async function handleApi(request, env) {
       }
     }
 
-    if (path === "/v1/storage/upload" || path.startsWith("/v1/storage/")) {
-      return json({ error: "File storage is not enabled yet. Configure an R2 bucket to activate it." }, 503);
+
+    const filesMatch = path.match(/^\\/v1\\/projects\\/([a-zA-Z0-9_-]{1,64})\\/files(?:\\/([a-zA-Z0-9_-]{36}))?$/);
+    if (filesMatch) {
+      if (!env.FILES) return json({ error: "AtDev Storage is not configured. Bind an R2 bucket as FILES." }, 503);
+      const [, project, fileId] = filesMatch;
+      const projectRow = await env.DB.prepare("SELECT id FROM projects WHERE owner_id = ? AND slug = ?")
+        .bind(user.id, project).first();
+      if (!projectRow) return json({ error: "Project not found." }, 404);
+      const prefix = storagePrefix(user.id, project);
+
+      if (!fileId && method === "GET") {
+        const cursor = url.searchParams.get("cursor") || undefined;
+        const page = await env.FILES.list({ prefix, cursor, limit: 100 });
+        return json({
+          files: page.objects.map(object => ({
+            id: object.key.slice(prefix.length),
+            name: object.customMetadata?.originalName || object.key.split("/").pop(),
+            size: object.size,
+            uploaded: object.uploaded,
+            contentType: object.httpMetadata?.contentType || "application/octet-stream"
+          })),
+          cursor: page.truncated ? page.cursor : null
+        });
+      }
+
+      if (!fileId && method === "POST") {
+        const contentLength = Number(request.headers.get("content-length") || 0);
+        if (contentLength > MAX_FILE_BYTES + 65536) return json({ error: "Upload limit is 10 MB per file." }, 413);
+        const form = await request.formData();
+        const file = form.get("file");
+        if (!(file instanceof File)) return json({ error: "Multipart field 'file' is required." }, 400);
+        if (file.size < 1) return json({ error: "Empty files are not allowed." }, 400);
+        if (file.size > MAX_FILE_BYTES) return json({ error: "Upload limit is 10 MB per file." }, 413);
+        const id = crypto.randomUUID();
+        const name = safeFileName(file.name);
+        const key = prefix + id;
+        const contentType = file.type && file.type.length <= 120 ? file.type : "application/octet-stream";
+        await env.FILES.put(key, file.stream(), {
+          httpMetadata: { contentType },
+          customMetadata: { originalName: name, ownerId: user.id, project, fileId: id }
+        });
+        return json({ file: { id, name, size: file.size, contentType } }, 201);
+      }
+
+      if (fileId && method === "GET") {
+        const object = await env.FILES.get(prefix + fileId);
+        if (!object) return json({ error: "File not found." }, 404);
+        const name = safeFileName(object.customMetadata?.originalName || "download");
+        const contentType = object.httpMetadata?.contentType || "application/octet-stream";
+        return new Response(object.body, {
+          headers: {
+            "content-type": contentType,
+            "content-length": String(object.size),
+            "content-disposition": "attachment; filename=\"" + name.replace(/["\\\\]/g, "_") + "\"",
+            "cache-control": "private, no-store",
+            "x-content-type-options": "nosniff"
+          }
+        });
+      }
+
+      if (fileId && method === "DELETE") {
+        const key = prefix + fileId;
+        const object = await env.FILES.head(key);
+        if (!object) return json({ error: "File not found." }, 404);
+        await env.FILES.delete(key);
+        return new Response(null, { status: 204 });
+      }
     }
+
     return json({ error: "Not found." }, 404);
   }
 
