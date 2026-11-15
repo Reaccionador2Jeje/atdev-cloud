@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import pg from "pg";
 import { timingSafeEqual, randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 
 const { Pool } = pg;
 const app = express();
@@ -17,6 +18,7 @@ const pool = new Pool({
   ssl: process.env.PGSSLMODE === "disable" ? false : (process.env.PGSSLMODE === "require" || process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined),
   max: Number(process.env.PG_POOL_MAX || 10), idleTimeoutMillis: 30000, connectionTimeoutMillis: 5000
 });
+await pool.query(await readFile(new URL("./schema.sql", import.meta.url), "utf8"));
 function authorized(req) {
   const value = req.get("authorization") || "";
   if (!value.startsWith("Bearer ")) return false;
