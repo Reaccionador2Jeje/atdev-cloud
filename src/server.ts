@@ -13,6 +13,7 @@ fs.mkdirSync(config.storagePath, { recursive: true });
 app.disable("x-powered-by");
 app.use(cors({ origin: config.corsOrigin }));
 app.use(express.json({ limit: "1mb" }));
+app.use(express.static(path.resolve("public")));
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -94,6 +95,31 @@ app.delete("/v1/projects/:project/records/:collection/:id", requireAuth, (req, r
   const result = records.delete.run(req.user!.id, project, collection, id);
   if (!result.changes) return res.status(404).json({ error: "Record not found." });
   res.status(204).end();
+});
+
+
+app.post("/v1/database/query", requireAuth, async (req, res) => {
+  const project = req.body?.project;
+  const sql = req.body?.sql;
+  if (typeof project !== "string" || !/^[a-zA-Z0-9_-]{1,64}$/.test(project)) {
+    return res.status(400).json({ error: "Invalid project name." });
+  }
+  if (typeof sql !== "string" || sql.trim().length === 0 || sql.length > 10000) {
+    return res.status(400).json({ error: "SQL must contain between 1 and 10000 characters." });
+  }
+  try {
+    const response = await fetch(`${config.atdevDbUrl}/v1/query`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ database: `${req.user!.id}_${project}`, sql })
+    });
+    if (!response.ok) return res.status(502).json({ error: "AtDev DB service unavailable." });
+    const result = await response.json() as { ok: boolean; result?: string; error?: string };
+    if (!result.ok) return res.status(400).json({ error: result.error ?? "Database query failed." });
+    return res.json({ result: result.result ?? "" });
+  } catch {
+    return res.status(503).json({ error: "AtDev DB is not running. Start it with: cargo run -- --server" });
+  }
 });
 
 app.post("/v1/storage/upload", requireAuth, upload.single("file"), (req, res) => {
