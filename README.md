@@ -19,7 +19,7 @@ No external PostgreSQL, Render, or Neon service is required for AtDev Cloud acco
 
 The Worker uses the existing D1 `users` table and its `id`, `email`, `password_hash`, and `created_at` fields. Existing D1 accounts keep their IDs and password hashes, so their project ownership and existing PBKDF2 credentials remain valid. New registrations are written directly to D1 using PBKDF2-HMAC-SHA256 password hashes (210,000 iterations) with a random salt. The existing JWT signing secret remains the session-signing key.
 
-The former optional PostgreSQL authentication service has been retired from the production path. Local SQLite accounts are separate development data and are not automatically imported into D1.
+The former optional PostgreSQL authentication service has been retired from the production path. Local SQLite accounts are separate development data and are not automatically imported into D1. The separate `atdev-accounts` OIDC/SSO project remains independent; its own account store is not silently merged into this D1 database.
 
 ## AtDev Storage
 
