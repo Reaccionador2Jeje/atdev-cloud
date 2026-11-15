@@ -2,7 +2,7 @@
 
 Open-source Backend-as-a-Service platform by AtDev Dev.
 
-AtDev Cloud provides a self-hostable backend with authentication, REST endpoints, file storage and database integration. The first alpha is intentionally small and designed to evolve toward native AtDev DB support.
+AtDev Cloud provides a self-hostable backend with authentication, REST endpoints, file storage and database integration. The first alpha includes a browser dashboard and a native AtDev DB service integration.
 
 ## Features in 0.1.0-alpha
 - Email/password registration and login with bcrypt password hashing.
