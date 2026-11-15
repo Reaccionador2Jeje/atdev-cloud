@@ -2,49 +2,159 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#090d18"><title>AtDev Cloud</title>
+<meta name="theme-color" content="#080d18"><meta name="description" content="AtDev Cloud: plataforma open-source para tus proyectos, datos y APIs.">
+<title>AtDev Cloud — Developer Platform</title>
 <style>
-:root{color-scheme:dark;--bg:#090d18;--panel:#111a2b;--line:#26344b;--muted:#9aabc4;--text:#eef4ff;--blue:#6ea8fe;--green:#5de0b0}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0%,#17294a 0,transparent 35%),var(--bg);color:var(--text);font:15px Inter,system-ui,sans-serif;min-height:100vh}
-header{height:72px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 max(5vw,22px);background:#090d18cc}
-.brand{font-size:21px;font-weight:800;letter-spacing:-.7px}.brand span{color:var(--blue)}.status{font-size:12px;color:var(--green)}
-main{max-width:1080px;margin:55px auto;padding:0 22px}.hero{margin-bottom:30px}.eyebrow{color:var(--blue);font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{font-size:clamp(32px,6vw,54px);letter-spacing:-2px;margin:12px 0}p{color:var(--muted);line-height:1.6}
-.panel{background:linear-gradient(145deg,#141f33,#0e1625);border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 18px 70px #0004}.auth{max-width:460px}.row{display:flex;gap:12px;flex-wrap:wrap}.field{display:block;width:100%;margin:13px 0;color:var(--muted);font-size:13px}input,textarea{display:block;width:100%;margin-top:7px;background:#080f1c;border:1px solid var(--line);border-radius:9px;padding:12px;color:var(--text);font:inherit;outline:none}input:focus,textarea:focus{border-color:var(--blue)}button{border:0;border-radius:9px;padding:11px 16px;background:var(--blue);color:#081326;font-weight:750;cursor:pointer}button.secondary{background:#25344d;color:var(--text)}button:disabled{opacity:.5;cursor:wait}.hidden{display:none!important}.workspace{display:grid;grid-template-columns:240px 1fr;gap:18px}.side{align-self:start}.side strong{display:block;margin-bottom:8px}.side small{color:var(--muted)}.editor textarea{min-height:190px;resize:vertical;font-family:ui-monospace,monospace}.output{margin-top:16px;padding:15px;background:#070d17;border:1px solid var(--line);border-radius:10px;white-space:pre-wrap;overflow:auto;min-height:70px;color:#c9d8ed;font:13px ui-monospace,monospace}.error{color:#ff9b9b}.hint{font-size:12px;margin-top:15px}.topline{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-@media(max-width:700px){main{margin:30px auto}.workspace{grid-template-columns:1fr}.panel{padding:18px}}
-</style></head>
+:root{color-scheme:dark;--bg:#080d18;--panel:#101a2b;--panel2:#142137;--line:#253650;--text:#edf4ff;--muted:#91a4c0;--blue:#79aaff;--blue2:#4d83e8;--green:#55d6a5;--red:#ff858b;--amber:#ffc66d;--shadow:0 18px 60px #0005}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 10% -10%,#19335b 0,transparent 34%),var(--bg);color:var(--text);font:14px Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;min-height:100vh}button,input,textarea{font:inherit}button{cursor:pointer;border:0;border-radius:9px;padding:10px 14px;font-weight:700;background:var(--blue);color:#071326;transition:.15s}button:hover{filter:brightness(1.08);transform:translateY(-1px)}button:disabled{opacity:.55;cursor:wait;transform:none}.secondary{background:#243650;color:var(--text)}.danger{background:#4b2732;color:#ffb2b5}.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}.small{font-size:12px;padding:7px 10px}.hidden{display:none!important}.muted{color:var(--muted)}.green{color:var(--green)}.red{color:var(--red)}.amber{color:var(--amber)}
+#authScreen{min-height:100vh;display:grid;grid-template-columns:1fr 440px;align-items:center;gap:8vw;padding:8vw}.authBrand{max-width:620px}.brand{font-size:24px;font-weight:850;letter-spacing:-1px}.brand b{color:var(--blue)}.eyebrow{font-size:11px;font-weight:800;letter-spacing:2px;color:var(--blue);text-transform:uppercase}.authBrand h1{font-size:clamp(42px,6vw,72px);line-height:1.02;letter-spacing:-3px;margin:18px 0}.authBrand p{font-size:17px;line-height:1.7;color:var(--muted);max-width:530px}.authPanel,.panel{background:linear-gradient(145deg,#142137,#0f1929);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}.authPanel{padding:28px}.authPanel h2{margin:0 0 8px;font-size:24px}.field{display:block;margin:15px 0;color:var(--muted);font-size:12px;font-weight:650}.field input,.field textarea,.field select{display:block;width:100%;margin-top:7px;padding:12px 13px;background:#080f1c;border:1px solid var(--line);border-radius:9px;color:var(--text);outline:none}.field input:focus,.field textarea:focus{border-color:var(--blue)}.authActions{display:flex;gap:10px;margin-top:18px}.authActions button{flex:1}.message{min-height:18px;margin-top:13px;font-size:12px;color:var(--muted)}.authFoot{font-size:11px;color:var(--muted);line-height:1.6;margin-top:20px}
+#app{min-height:100vh}.sidebar{position:fixed;inset:0 auto 0 0;width:244px;background:#0a1220;border-right:1px solid var(--line);padding:23px 15px;display:flex;flex-direction:column;z-index:5}.sidebar .brand{padding:0 12px 28px}.navLabel{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#7185a3;padding:13px 12px 7px;font-weight:800}.nav button{width:100%;text-align:left;display:flex;gap:12px;align-items:center;background:transparent;color:#a9bad2;padding:11px 12px;margin:2px 0;font-weight:600}.nav button.active{background:#1b2b44;color:#fff}.nav button:hover{background:#15253d;transform:none}.navIcon{width:19px;text-align:center;color:var(--blue)}.sidebarBottom{margin-top:auto;border-top:1px solid var(--line);padding:17px 9px 0}.userMini{display:flex;align-items:center;gap:10px;min-width:0}.avatar{width:34px;height:34px;border-radius:10px;background:#29466d;display:grid;place-items:center;font-weight:800;color:#cde0ff}.userMini div:last-child{min-width:0}.userMini strong,.userMini small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.userMini small{font-size:11px;color:var(--muted);margin-top:3px}
+.main{margin-left:244px;min-height:100vh}.topbar{height:68px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 34px;background:#080d18c9;position:sticky;top:0;z-index:3;backdrop-filter:blur(14px)}.crumb{font-size:13px;color:var(--muted)}.crumb strong{color:var(--text)}.topRight{display:flex;align-items:center;gap:13px}.statusDot{font-size:11px;color:var(--green)}.content{max-width:1250px;margin:0 auto;padding:34px}.pageHead{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:25px}.pageHead h1{font-size:28px;letter-spacing:-1px;margin:5px 0}.pageHead p{color:var(--muted);margin:0;line-height:1.6}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}.grid2{display:grid;grid-template-columns:1.2fr .8fr;gap:15px}.panel{padding:21px;box-shadow:none}.stat{display:flex;align-items:center;justify-content:space-between}.statLabel{color:var(--muted);font-size:12px}.statValue{font-size:30px;font-weight:800;letter-spacing:-1px;margin-top:9px}.statIcon{width:42px;height:42px;border-radius:12px;background:#1b3150;display:grid;place-items:center;font-size:18px}.sectionTitle{font-size:15px;margin:0 0 15px}.projectList{display:grid;gap:10px}.projectCard{border:1px solid var(--line);border-radius:12px;padding:15px;background:#0c1524;display:flex;justify-content:space-between;gap:12px;align-items:center}.projectCard h3{font-size:14px;margin:0 0 5px}.projectCard p{font-size:12px;color:var(--muted);margin:0}.projectActions{display:flex;gap:7px;flex-shrink:0}.empty{border:1px dashed #344966;border-radius:12px;padding:25px;text-align:center;color:var(--muted)}.empty strong{display:block;color:var(--text);margin-bottom:6px}.formGrid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.formGrid .wide{grid-column:1/-1}.inlineForm{display:flex;gap:9px;align-items:end;flex-wrap:wrap}.inlineForm .field{flex:1;min-width:180px;margin:0}.inlineForm input{margin-top:6px}.console{background:#070d17;border:1px solid var(--line);border-radius:12px;overflow:hidden}.consoleTop{display:flex;justify-content:space-between;align-items:center;padding:10px 13px;border-bottom:1px solid var(--line);font-size:11px;color:var(--muted)}textarea.code{display:block;width:100%;min-height:205px;resize:vertical;border:0;outline:0;background:#070d17;color:#d8e6fa;padding:17px;font:13px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}.output{white-space:pre-wrap;overflow:auto;min-height:80px;max-height:340px;padding:15px;background:#070d17;border:1px solid var(--line);border-radius:10px;color:#c7d8ef;font:12px/1.6 ui-monospace,monospace}.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}.select{background:#0b1422;color:var(--text);border:1px solid var(--line);padding:10px;border-radius:9px;min-width:180px}.codeBlock{position:relative;background:#080f1b;border:1px solid var(--line);border-radius:10px;padding:15px;overflow:auto;color:#c8dcf7;font:12px/1.7 ui-monospace,monospace;white-space:pre}.apiRow{padding:13px 0;border-bottom:1px solid var(--line)}.method{display:inline-block;min-width:62px;font-size:10px;font-weight:900;color:var(--green)}.apiRow code{color:#dce8fb}.apiRow p{font-size:12px;color:var(--muted);margin:6px 0 0}.notice{border:1px solid #5a4a2c;background:#2b2418;color:#f2d29b;padding:13px 15px;border-radius:10px;font-size:12px;line-height:1.6}.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;padding:5px 9px;color:var(--muted);font-size:10px}.mobileMenu{display:none}
+@media(max-width:900px){.sidebar{width:205px}.main{margin-left:205px}.content{padding:25px 20px}.grid{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}#authScreen{grid-template-columns:1fr 390px;gap:35px;padding:5vw}}
+@media(max-width:650px){#authScreen{display:flex;flex-direction:column;justify-content:center;align-items:stretch;padding:25px;gap:25px}.authBrand h1{font-size:43px}.authBrand p{font-size:14px}.authPanel{padding:22px}.sidebar{width:100%;height:auto;inset:0 0 auto;position:sticky;padding:10px 12px;display:block;border-right:0;border-bottom:1px solid var(--line)}.sidebar .brand{padding:3px 5px 9px}.nav{display:flex;overflow:auto;gap:3px}.navLabel,.sidebarBottom{display:none}.nav button{width:auto;white-space:nowrap;font-size:11px;padding:8px 10px}.navIcon{display:none}.main{margin:0}.topbar{height:52px;padding:0 16px}.content{padding:22px 14px}.pageHead{display:block}.pageHead>button{margin-top:14px}.grid{grid-template-columns:1fr}.formGrid{grid-template-columns:1fr}.formGrid .wide{grid-column:auto}.projectCard{align-items:flex-start;flex-direction:column}.projectActions{width:100%}.projectActions button{flex:1}.mobileMenu{display:block}}
+</style>
+</head>
 <body>
-<header><div class="brand">AtDev <span>Cloud</span></div><div class="status">● Plataforma alpha</div></header>
-<main>
-<section class="hero"><div class="eyebrow">AtDev Dev · Open source</div><h1>Tu backend.<br>Tu espacio.</h1><p>Gestiona tus proyectos y trabaja con AtDev DB desde un solo panel.</p></section>
-<section id="auth" class="panel auth">
-<h2 id="authTitle">Iniciar sesión</h2><p id="authDescription">Accede a tu espacio de desarrollo.</p>
-<label class="field">Correo electrónico<input id="email" type="email" autocomplete="email" placeholder="tu@correo.com"></label>
-<label class="field">Contraseña<input id="password" type="password" autocomplete="current-password" placeholder="Mínimo 10 caracteres"></label>
-<div class="row"><button id="authSubmit">Entrar</button><button class="secondary" id="toggleAuth">Crear cuenta</button></div><p id="authMessage" class="hint"></p>
+<section id="authScreen">
+  <div class="authBrand">
+    <div class="brand">AtDev <b>Cloud</b></div>
+    <div class="eyebrow" style="margin-top:40px">Developer platform · Alpha</div>
+    <h1>Construye.<br>Conecta.<br><span style="color:var(--blue)">Despliega.</span></h1>
+    <p>Un espacio open-source para organizar proyectos, administrar datos y conectar tus aplicaciones con una API propia.</p>
+    <div class="pill">✦ Open source · AtDev Dev</div>
+  </div>
+  <div class="authPanel">
+    <h2 id="authTitle">Bienvenido de vuelta</h2><p class="muted" id="authSubtitle">Inicia sesión para entrar a tu workspace.</p>
+    <label class="field">Correo electrónico<input id="email" type="email" autocomplete="email" placeholder="tu@correo.com"></label>
+    <label class="field">Contraseña<input id="password" type="password" autocomplete="current-password" placeholder="Mínimo 10 caracteres"></label>
+    <div class="authActions"><button id="authSubmit">Iniciar sesión</button><button class="secondary" id="toggleAuth">Crear cuenta</button></div>
+    <div id="authMessage" class="message"></div>
+    <div class="authFoot">Al continuar, tus proyectos y datos quedan asociados a tu cuenta. Esta es una versión alpha: evita almacenar información crítica.</div>
+  </div>
 </section>
-<section id="workspace" class="workspace hidden">
-<aside class="panel side"><strong>Workspace</strong><small id="userEmail"></small><label class="field">Proyecto<input id="project" value="mi-proyecto" maxlength="64"></label><button class="secondary" id="logout">Cerrar sesión</button><p class="hint">Cada usuario tiene su propia base de datos por proyecto.</p></aside>
-<div class="panel editor"><div class="topline"><div><div class="eyebrow">Database console</div><h2>AtDev DB</h2></div><span id="databaseStatus" class="status">● Comprobando DB...</span></div>
-<p>Ejecuta SQL en tu base de datos. Los datos se guardan en el servicio AtDev DB.</p>
-<textarea id="sql" spellcheck="false">CREATE TABLE notas (id INTEGER, contenido TEXT);
+
+<section id="app" class="hidden">
+  <aside class="sidebar">
+    <div class="brand">AtDev <b>Cloud</b></div>
+    <div class="navLabel">Workspace</div>
+    <nav class="nav">
+      <button data-view="overview" class="active"><span class="navIcon">⌂</span>Resumen</button>
+      <button data-view="projects"><span class="navIcon">▦</span>Proyectos</button>
+      <button data-view="database"><span class="navIcon">▤</span>Base de datos</button>
+    </nav>
+    <div class="navLabel">Developer</div>
+    <nav class="nav">
+      <button data-view="api"><span class="navIcon">⌘</span>API Reference</button>
+      <button data-view="settings"><span class="navIcon">⚙</span>Configuración</button>
+    </nav>
+    <div class="sidebarBottom">
+      <div class="userMini"><div class="avatar" id="avatar">A</div><div><strong id="sideEmail">Cuenta</strong><small>AtDev account</small></div></div>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="topbar"><div class="crumb">AtDev Cloud <span class="muted">/</span> <strong id="crumb">Resumen</strong></div><div class="topRight"><span id="globalDbStatus" class="statusDot">● verificando servicios</span><span class="pill">ALPHA 0.2</span></div></header>
+    <main class="content">
+      <section id="view-overview" class="view">
+        <div class="pageHead"><div><div class="eyebrow">Workspace overview</div><h1>Tu espacio de desarrollo</h1><p>Un vistazo rápido a tus proyectos y servicios.</p></div><button onclick="navigate('projects')">＋ Nuevo proyecto</button></div>
+        <div class="grid">
+          <div class="panel stat"><div><div class="statLabel">Proyectos</div><div class="statValue" id="statProjects">0</div></div><div class="statIcon">▦</div></div>
+          <div class="panel stat"><div><div class="statLabel">AtDev DB</div><div class="statValue" id="statDb" style="font-size:20px">Comprobando</div></div><div class="statIcon">▤</div></div>
+          <div class="panel stat"><div><div class="statLabel">Cuenta</div><div class="statValue" style="font-size:18px">Activa</div></div><div class="statIcon">◉</div></div>
+        </div>
+        <div class="grid2" style="margin-top:16px">
+          <div class="panel"><div class="stat"><h2 class="sectionTitle">Proyectos recientes</h2><button class="ghost small" onclick="navigate('projects')">Ver todos</button></div><div id="recentProjects" class="projectList"><div class="empty">Cargando proyectos...</div></div></div>
+          <div class="panel"><h2 class="sectionTitle">Servicios</h2><div class="apiRow"><span class="green">●</span> <strong>AtDev Cloud API</strong><p>Autenticación y registros sobre Cloudflare D1.</p></div><div class="apiRow"><span id="dbDot" class="amber">●</span> <strong>AtDev DB</strong><p id="dbDescription">Comprobando conexión con el motor SQL.</p></div><div class="apiRow"><span class="green">●</span> <strong>Cloudflare Workers</strong><p>Aplicación web y API en el mismo Worker.</p></div></div>
+        </div>
+        <div class="notice" style="margin-top:16px">Versión alpha: el almacenamiento de archivos, las claves de API, las funciones serverless y los eventos en tiempo real todavía no están habilitados.</div>
+      </section>
+
+      <section id="view-projects" class="view hidden">
+        <div class="pageHead"><div><div class="eyebrow">Workspace</div><h1>Proyectos</h1><p>Crea y organiza espacios de trabajo independientes.</p></div></div>
+        <div class="panel" style="margin-bottom:17px"><h2 class="sectionTitle">Crear un proyecto</h2><form id="createProjectForm" class="formGrid"><label class="field">Nombre del proyecto<input id="newProjectName" required minlength="2" maxlength="80" placeholder="Mi aplicación"></label><label class="field">Identificador<input id="newProjectSlug" maxlength="64" placeholder="mi-aplicacion"></label><label class="field wide">Descripción<input id="newProjectDescription" maxlength="300" placeholder="¿Qué estás construyendo?"></label><div class="wide"><button id="createProjectButton">＋ Crear proyecto</button><span id="projectMessage" class="message" style="display:inline-block;margin-left:10px"></span></div></form></div>
+        <div class="panel"><div class="stat"><h2 class="sectionTitle">Tus proyectos</h2><span id="projectCount" class="pill">0 proyectos</span></div><div id="allProjects" class="projectList"><div class="empty">Cargando...</div></div></div>
+      </section>
+
+      <section id="view-database" class="view hidden">
+        <div class="pageHead"><div><div class="eyebrow">Data services</div><h1>Base de datos</h1><p>Ejecuta consultas SQL en el proyecto seleccionado.</p></div><span id="databasePageStatus" class="pill">● comprobando AtDev DB</span></div>
+        <div class="panel"><div class="inlineForm" style="margin-bottom:15px"><label class="field">Proyecto<select id="databaseProject" class="select"></select></label><span class="muted" id="databaseHint" style="font-size:12px;padding-bottom:10px">Cada proyecto tiene su propia base.</span></div>
+          <div class="console"><div class="consoleTop"><span>SQL EDITOR · AtDev DB</span><span>Experimental</span></div><textarea id="sql" class="code" spellcheck="false">CREATE TABLE notas (id INTEGER, contenido TEXT);
 INSERT INTO notas VALUES (1, 'Hola desde AtDev Cloud');
-SELECT * FROM notas;</textarea>
-<div class="row"><button id="runQuery">Ejecutar SQL</button><button class="secondary" id="clearOutput">Limpiar resultado</button></div>
-<pre id="output" class="output">Listo. Ejecuta una consulta para comenzar.</pre>
-<p class="hint">AtDev DB alpha: dialecto SQL experimental. No usar todavía para datos críticos.</p>
-</div></section>
-</main>
+SELECT * FROM notas;</textarea></div>
+          <div class="toolbar"><button id="runQuery">▶ Ejecutar consulta</button><button class="secondary" id="clearOutput">Limpiar</button><button class="ghost" id="exampleQuery">Cargar ejemplo</button></div>
+          <h3 class="sectionTitle" style="margin-top:22px">Resultado</h3><pre id="output" class="output">Selecciona un proyecto y ejecuta una consulta.</pre>
+        </div>
+        <div class="notice" style="margin-top:15px">El motor AtDev DB es experimental y se conecta como servicio remoto. No uses esta consola para información crítica ni expongas el servicio SQL directamente a internet.</div>
+      </section>
+
+      <section id="view-api" class="view hidden">
+        <div class="pageHead"><div><div class="eyebrow">Developer tools</div><h1>API Reference</h1><p>Endpoints disponibles en esta versión de AtDev Cloud.</p></div><button class="secondary" id="copyBaseUrl">Copiar URL base</button></div>
+        <div class="panel" style="margin-bottom:15px"><div class="muted" style="font-size:11px">BASE URL</div><div style="font:14px ui-monospace;margin-top:8px" id="baseUrl"></div><p style="font-size:12px">Los endpoints privados requieren <code>Authorization: Bearer TU_TOKEN</code>.</p></div>
+        <div class="panel"><h2 class="sectionTitle">Autenticación</h2>
+          <div class="apiRow"><span class="method">POST</span><code>/v1/auth/register</code><p>Crear una cuenta. Body: { "email": "...", "password": "..." }</p></div>
+          <div class="apiRow"><span class="method">POST</span><code>/v1/auth/login</code><p>Iniciar sesión y obtener un token bearer.</p></div>
+          <div class="apiRow"><span class="method">GET</span><code>/v1/auth/me</code><p>Consultar la cuenta autenticada.</p></div>
+          <h2 class="sectionTitle" style="margin-top:23px">Proyectos</h2>
+          <div class="apiRow"><span class="method">GET</span><code>/v1/projects</code><p>Listar los proyectos de la cuenta.</p></div>
+          <div class="apiRow"><span class="method">POST</span><code>/v1/projects</code><p>Crear proyecto. Body: { "name": "Mi app", "slug": "mi-app", "description": "..." }</p></div>
+          <div class="apiRow"><span class="method">GET</span><code>/v1/projects/:slug</code><p>Obtener un proyecto.</p></div>
+          <div class="apiRow"><span class="method">PATCH</span><code>/v1/projects/:slug</code><p>Actualizar nombre o descripción.</p></div>
+          <div class="apiRow"><span class="method">DELETE</span><code>/v1/projects/:slug</code><p>Eliminar el proyecto y sus registros asociados.</p></div>
+          <h2 class="sectionTitle" style="margin-top:23px">Registros JSON</h2>
+          <div class="apiRow"><span class="method">GET</span><code>/v1/projects/:project/records/:collection</code><p>Listar registros de una colección.</p></div>
+          <div class="apiRow"><span class="method">POST</span><code>/v1/projects/:project/records/:collection</code><p>Crear un registro JSON.</p></div>
+          <div class="apiRow"><span class="method">GET</span><code>/v1/projects/:project/records/:collection/:id</code><p>Obtener un registro.</p></div>
+          <div class="apiRow"><span class="method">PATCH</span><code>/v1/projects/:project/records/:collection/:id</code><p>Actualizar un registro.</p></div>
+          <div class="apiRow"><span class="method">DELETE</span><code>/v1/projects/:project/records/:collection/:id</code><p>Eliminar un registro.</p></div>
+          <h2 class="sectionTitle" style="margin-top:23px">Database & Health</h2>
+          <div class="apiRow"><span class="method">GET</span><code>/health</code><p>Estado público del servicio.</p></div>
+          <div class="apiRow"><span class="method">GET</span><code>/v1/database/status</code><p>Comprobar conexión con AtDev DB.</p></div>
+          <div class="apiRow"><span class="method">POST</span><code>/v1/database/query</code><p>Ejecutar SQL en la base de un proyecto.</p></div>
+        </div>
+        <div class="panel" style="margin-top:15px"><h2 class="sectionTitle">Ejemplo JavaScript</h2><pre class="codeBlock" id="apiExample">const response = await fetch("https://atdev-cloud.cristopheriguaran-7.workers.dev/v1/projects", {
+  headers: { Authorization: "Bearer TU_TOKEN" }
+});
+const data = await response.json();
+console.log(data.projects);</pre><button class="secondary small" id="copyExample">Copiar ejemplo</button></div>
+      </section>
+
+      <section id="view-settings" class="view hidden">
+        <div class="pageHead"><div><div class="eyebrow">Account</div><h1>Configuración</h1><p>Información de tu cuenta y sesión.</p></div></div>
+        <div class="panel" style="max-width:700px"><h2 class="sectionTitle">Cuenta</h2><label class="field">Correo electrónico<input id="settingsEmail" readonly></label><label class="field">Identidad del servicio<input readonly value="AtDev Cloud · Cloudflare Workers"></label><div class="notice">Los tokens de sesión tienen una duración limitada. Si tu sesión caduca, vuelve a iniciar sesión.</div><div style="margin-top:18px"><button class="danger" id="logout">Cerrar sesión</button></div></div>
+      </section>
+    </main>
+  </div>
+</section>
 <script>
-const $=id=>document.getElementById(id);let token=localStorage.getItem("atdev_token")||"";let registering=false;
-async function refreshDatabaseStatus(){const status=$("databaseStatus");try{const data=await api("/v1/database/status");status.textContent=!data.configured?"● AtDev DB sin configurar":(data.connected?"● AtDev DB conectada":"● AtDev DB desconectada");status.style.color=data.connected?"var(--green)":"#ff9b9b"}catch{status.textContent="● Estado desconocido";status.style.color="#ff9b9b"}}
-function showWorkspace(user){$("auth").classList.add("hidden");$("workspace").classList.remove("hidden");$("userEmail").textContent=user.email||"";refreshDatabaseStatus()}
-function showAuth(){$("workspace").classList.add("hidden");$("auth").classList.remove("hidden")}
-async function api(url,options={}){const response=await fetch(url,{...options,headers:{"content-type":"application/json",...(token?{authorization:"Bearer "+token}:{}),...(options.headers||{})}});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Error de conexión");return data}
-$("toggleAuth").onclick=()=>{registering=!registering;$("authTitle").textContent=registering?"Crear cuenta":"Iniciar sesión";$("authDescription").textContent=registering?"Regístrate para crear tu espacio.":"Accede a tu espacio de desarrollo.";$("authSubmit").textContent=registering?"Registrarme":"Entrar";$("toggleAuth").textContent=registering?"Ya tengo cuenta":"Crear cuenta";$("password").autocomplete=registering?"new-password":"current-password";$("authMessage").textContent=""};
-$("authSubmit").onclick=async()=>{const button=$("authSubmit");button.disabled=true;$("authMessage").textContent="Conectando...";try{const data=await api(registering?"/v1/auth/register":"/v1/auth/login",{method:"POST",body:JSON.stringify({email:$("email").value,password:$("password").value})});token=data.token;localStorage.setItem("atdev_token",token);showWorkspace(data.user)}catch(e){$("authMessage").textContent=e.message;$("authMessage").className="hint error"}finally{button.disabled=false}};
-$("logout").onclick=()=>{token="";localStorage.removeItem("atdev_token");showAuth()};
-$("runQuery").onclick=async()=>{const button=$("runQuery");button.disabled=true;$("output").textContent="Ejecutando...";$("output").classList.remove("error");try{const data=await api("/v1/database/query",{method:"POST",body:JSON.stringify({project:$("project").value,sql:$("sql").value})});$("output").textContent=data.result||"(consulta ejecutada)"}catch(e){$("output").textContent=e.message;$("output").classList.add("error")}finally{button.disabled=false}};
-$("clearOutput").onclick=()=>{$("output").textContent="";$("output").classList.remove("error")};
-setInterval(refreshDatabaseStatus,15000);
-if(token){api("/v1/auth/me").then(data=>showWorkspace(data.user)).catch(()=>{token="";localStorage.removeItem("atdev_token");showAuth()})}
-</script></body></html>
+const $=id=>document.getElementById(id);
+const API_BASE=location.origin;
+let token=localStorage.getItem("atdev_token")||"";
+let registering=false,user=null,projects=[],activeView="overview";
+let activeProject=localStorage.getItem("atdev_active_project")||"";
+async function api(path,options={}){const headers={...(options.body?{"content-type":"application/json"}:{}),...(token?{authorization:"Bearer "+token}:{}),...(options.headers||{})};const response=await fetch(path,{...options,headers});if(response.status===204)return null;const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Error de conexión ("+response.status+")");return data}
+function message(id,text,error=false){const el=$(id);el.textContent=text;el.className="message "+(error?"red":"green")}
+function navigate(view){activeView=view;document.querySelectorAll(".view").forEach(x=>x.classList.add("hidden"));$("view-"+view).classList.remove("hidden");document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("active",x.dataset.view===view));const names={overview:"Resumen",projects:"Proyectos",database:"Base de datos",api:"API Reference",settings:"Configuración"};$("crumb").textContent=names[view];if(view==="database")refreshDbStatus()}
+function showApp(account){user=account;$("authScreen").classList.add("hidden");$("app").classList.remove("hidden");$("sideEmail").textContent=account.email;$("settingsEmail").value=account.email;$("avatar").textContent=(account.email||"A").slice(0,1).toUpperCase();$("baseUrl").textContent=API_BASE;loadProjects();refreshDbStatus();navigate("overview")}
+function showAuth(){$("app").classList.add("hidden");$("authScreen").classList.remove("hidden")}
+async function loadProjects(){try{const data=await api("/v1/projects");projects=data.projects||[];if(!projects.some(p=>p.slug===activeProject))activeProject=projects[0]?.slug||"";localStorage.setItem("atdev_active_project",activeProject);renderProjects()}catch(e){console.error(e);$("allProjects").innerHTML='<div class="empty">No se pudieron cargar los proyectos: '+escapeHtml(e.message)+'</div>'}}
+function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function renderProjects(){const count=projects.length;$("statProjects").textContent=count;$("projectCount").textContent=count+" proyecto"+(count===1?"":"s");const cards=projects.map(p=>'<article class="projectCard"><div><h3>'+escapeHtml(p.name)+'</h3><p><code>'+escapeHtml(p.slug)+'</code> · '+escapeHtml(p.description||"Sin descripción")+'</p></div><div class="projectActions"><button class="secondary small" data-open="'+escapeHtml(p.slug)+'">Abrir</button><button class="ghost small" data-edit="'+escapeHtml(p.slug)+'">Editar</button><button class="danger small" data-delete="'+escapeHtml(p.slug)+'">Eliminar</button></div></article>').join("");$("allProjects").innerHTML=cards||'<div class="empty"><strong>Aún no tienes proyectos</strong>Crea tu primer proyecto para comenzar.</div>';$("recentProjects").innerHTML=projects.slice(0,4).map(p=>'<article class="projectCard"><div><h3>'+escapeHtml(p.name)+'</h3><p>'+escapeHtml(p.slug)+'</p></div><button class="secondary small" data-open="'+escapeHtml(p.slug)+'">Abrir</button></article>').join("")||'<div class="empty"><strong>Tu workspace está vacío</strong>Crea un proyecto para comenzar.</div>';$("databaseProject").innerHTML=projects.map(p=>'<option value="'+escapeHtml(p.slug)+'">'+escapeHtml(p.name)+'</option>').join("")||'<option value="">Crea un proyecto primero</option>';if(activeProject)$("databaseProject").value=activeProject;document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{activeProject=b.dataset.open;localStorage.setItem("atdev_active_project",activeProject);$("databaseProject").value=activeProject;navigate("database")});document.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>deleteProject(b.dataset.delete));document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editProject(b.dataset.edit))}
+async function createProject(event){event.preventDefault();const button=$("createProjectButton");button.disabled=true;try{const name=$("newProjectName").value.trim();const body={name,slug:$("newProjectSlug").value.trim()||undefined,description:$("newProjectDescription").value.trim()};const data=await api("/v1/projects",{method:"POST",body:JSON.stringify(body)});activeProject=data.project.slug;localStorage.setItem("atdev_active_project",activeProject);$("createProjectForm").reset();message("projectMessage","Proyecto creado.");await loadProjects()}catch(e){message("projectMessage",e.message,true)}finally{button.disabled=false}}
+async function deleteProject(slug){const p=projects.find(x=>x.slug===slug);if(!p)return;if(!confirm('¿Eliminar "'+p.name+'" y todos sus registros? Esta acción no se puede deshacer.'))return;try{await api("/v1/projects/"+encodeURIComponent(slug),{method:"DELETE"});if(activeProject===slug)activeProject="";await loadProjects()}catch(e){alert(e.message)}}
+async function editProject(slug){const p=projects.find(x=>x.slug===slug);if(!p)return;const name=prompt("Nombre del proyecto:",p.name);if(name===null)return;const description=prompt("Descripción:",p.description||"");if(description===null)return;try{await api("/v1/projects/"+encodeURIComponent(slug),{method:"PATCH",body:JSON.stringify({name,description})});await loadProjects()}catch(e){alert(e.message)}}
+async function refreshDbStatus(){try{const data=await api("/v1/database/status");const connected=!!data.connected;const text=connected?"● AtDev DB conectada":"● AtDev DB desconectada";$("globalDbStatus").textContent=text;$("globalDbStatus").className="statusDot "+(connected?"green":"red");$("statDb").textContent=connected?"Conectada":"Desconectada";$("statDb").style.color=connected?"var(--green)":"var(--red)";$("dbDot").className=connected?"green":"red";$("dbDescription").textContent=connected?"El motor SQL responde correctamente.":"Configura el servicio remoto AtDev DB para activar SQL."; $("databasePageStatus").textContent=text}catch{$("globalDbStatus").textContent="● Estado no disponible";$("statDb").textContent="No disponible"}}
+async function runQuery(){const button=$("runQuery");if(!activeProject){$("output").textContent="Primero crea o selecciona un proyecto.";return}button.disabled=true;$("output").textContent="Ejecutando consulta...";$("output").classList.remove("red");try{const data=await api("/v1/database/query",{method:"POST",body:JSON.stringify({project:activeProject,sql:$("sql").value})});$("output").textContent=data.result||"(consulta ejecutada)"}catch(e){$("output").textContent=e.message;$("output").classList.add("red")}finally{button.disabled=false}}
+async function copyText(value){try{await navigator.clipboard.writeText(value);return true}catch{return false}}
+$("toggleAuth").onclick=()=>{registering=!registering;$("authTitle").textContent=registering?"Crear cuenta":"Bienvenido de vuelta";$("authSubtitle").textContent=registering?"Regístrate para crear tu workspace.":"Inicia sesión para entrar a tu workspace.";$("authSubmit").textContent=registering?"Crear cuenta":"Iniciar sesión";$("toggleAuth").textContent=registering?"Ya tengo cuenta":"Crear cuenta";$("password").autocomplete=registering?"new-password":"current-password";$("authMessage").textContent=""};
+$("authSubmit").onclick=async()=>{const button=$("authSubmit");button.disabled=true;message("authMessage","Conectando...");try{const data=await api(registering?"/v1/auth/register":"/v1/auth/login",{method:"POST",body:JSON.stringify({email:$("email").value,password:$("password").value})});token=data.token;localStorage.setItem("atdev_token",token);showApp(data.user)}catch(e){message("authMessage",e.message,true)}finally{button.disabled=false}};
+$("password").addEventListener("keydown",e=>{if(e.key==="Enter")$("authSubmit").click()});
+$("createProjectForm").addEventListener("submit",createProject);
+$("runQuery").onclick=runQuery;$("clearOutput").onclick=()=>$("output").textContent="";$("databaseProject").onchange=()=>{activeProject=$("databaseProject").value;localStorage.setItem("atdev_active_project",activeProject)};$("exampleQuery").onclick=()=>$("sql").value="CREATE TABLE ejemplo (id INTEGER, nombre TEXT);\nINSERT INTO ejemplo VALUES (1, 'AtDev Cloud');\nSELECT * FROM ejemplo;";
+$("copyBaseUrl").onclick=async()=>alert(await copyText(API_BASE)?"URL copiada.":"No se pudo copiar.");$("copyExample").onclick=async()=>alert(await copyText($("apiExample").textContent)?"Ejemplo copiado.":"No se pudo copiar.");
+$("logout").onclick=()=>{token="";user=null;localStorage.removeItem("atdev_token");showAuth()};
+document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>navigate(b.dataset.view));
+$("newProjectName").addEventListener("input",()=>{if(!$("newProjectSlug").dataset.edited)$("newProjectSlug").value=$("newProjectName").value.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9_-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,64)});
+$("newProjectSlug").addEventListener("input",()=>{$("newProjectSlug").dataset.edited="1"});
+setInterval(()=>{if(token&&!$("app").classList.contains("hidden"))refreshDbStatus()},20000);
+if(token){api("/v1/auth/me").then(data=>showApp(data.user)).catch(()=>{token="";localStorage.removeItem("atdev_token");showAuth()})}
+</script>
+</body></html>
