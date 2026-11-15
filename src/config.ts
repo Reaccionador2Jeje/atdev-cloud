@@ -19,5 +19,6 @@ export const config = {
   databasePath: path.resolve(process.env.DATABASE_PATH ?? "./data/atdev-cloud.sqlite"),
   storagePath: path.resolve(process.env.STORAGE_PATH ?? "./storage"),
   maxUploadBytes: positiveNumber(process.env.MAX_UPLOAD_MB, 10) * 1024 * 1024,
-  corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:5173"
+  corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
+  atdevDbUrl: process.env.ATDEV_DB_URL ?? "http://127.0.0.1:8788"
 };
