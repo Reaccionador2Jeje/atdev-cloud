@@ -86,8 +86,8 @@ async function readUser(request, env) {
     if (!valid) return null;
     const payload = JSON.parse(new TextDecoder().decode(fromBase64url(parts[1])));
     if (typeof payload.sub !== "string" || typeof payload.email !== "string" || payload.exp <= Math.floor(Date.now() / 1000)) return null;
-    const user = await env.DB.prepare("SELECT id, email FROM users WHERE id = ?").bind(payload.sub).first();
-    return user || null;
+    // The signed token is the identity source; D1 keeps a shadow row for project foreign keys.
+    return { id: payload.sub, email: payload.email };
   } catch { return null; }
 }
 
@@ -101,13 +101,36 @@ async function handleApi(request, env) {
   if (path === "/v1/auth/register" && method === "POST") {
     if (!env.JWT_SECRET || env.JWT_SECRET.length < 32) return json({ error: "Authentication is not configured. Set the JWT_SECRET Worker secret." }, 503);
     const body = await readJson(request);
-    if (typeof body.email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email) || body.email.length > 254) {
-      return json({ error: "A valid email is required." }, 400);
-    }
-    if (typeof body.password !== "string" || body.password.length < 10 || body.password.length > 72) {
-      return json({ error: "Password must contain between 10 and 72 characters." }, 400);
-    }
+    if (typeof body.email !== "string" || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(body.email) || body.email.length > 254) return json({ error: "A valid email is required." }, 400);
+    if (typeof body.password !== "string" || body.password.length < 10 || body.password.length > 72) return json({ error: "Password must contain between 10 and 72 characters." }, 400);
     const email = body.email.trim().toLowerCase();
+    if (env.AUTH_SERVICE_URL && env.AUTH_SERVICE_TOKEN) {
+      const user = { id: crypto.randomUUID(), email };
+      try {
+        await env.DB.prepare("INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)")
+          .bind(user.id, email, "external$postgres", new Date().toISOString()).run();
+      } catch (error) {
+        if (String(error).includes("UNIQUE")) return json({ error: "Email is already registered." }, 409);
+        throw error;
+      }
+      try {
+        const response = await fetch(env.AUTH_SERVICE_URL.replace(/\\/+$/, "") + "/internal/register", {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: "Bearer " + env.AUTH_SERVICE_TOKEN },
+          body: JSON.stringify({ ...user, password: body.password }),
+          signal: AbortSignal.timeout(8000)
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id).run();
+          return json({ error: result.error || "Account service rejected registration." }, response.status);
+        }
+      } catch {
+        await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id).run();
+        return json({ error: "Account service unavailable. Please try again later." }, 503);
+      }
+      return json({ user, token: await signToken(user, env.JWT_SECRET) }, 201);
+    }
     const existing = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(email).first();
     if (existing) return json({ error: "Email is already registered." }, 409);
     const user = { id: crypto.randomUUID(), email };
@@ -125,14 +148,42 @@ async function handleApi(request, env) {
   if (path === "/v1/auth/login" && method === "POST") {
     if (!env.JWT_SECRET || env.JWT_SECRET.length < 32) return json({ error: "Authentication is not configured. Set the JWT_SECRET Worker secret." }, 503);
     const body = await readJson(request);
-    if (typeof body.email !== "string" || typeof body.password !== "string") {
-      return json({ error: "Email and password are required." }, 400);
+    if (typeof body.email !== "string" || typeof body.password !== "string") return json({ error: "Email and password are required." }, 400);
+    const email = body.email.trim().toLowerCase();
+    if (env.AUTH_SERVICE_URL && env.AUTH_SERVICE_TOKEN) {
+      try {
+        const base = env.AUTH_SERVICE_URL.replace(/\\/+$/, "");
+        let response = await fetch(base + "/internal/login", {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: "Bearer " + env.AUTH_SERVICE_TOKEN },
+          body: JSON.stringify({ email, password: body.password }),
+          signal: AbortSignal.timeout(8000)
+        });
+        let result = await response.json().catch(() => ({}));
+        if (!response.ok && response.status === 401) {
+          const legacy = await env.DB.prepare("SELECT id, email, password_hash FROM users WHERE email = ?").bind(email).first();
+          if (legacy && await verifyPassword(body.password, legacy.password_hash)) {
+            response = await fetch(base + "/internal/migrate", {
+              method: "POST",
+              headers: { "content-type": "application/json", authorization: "Bearer " + env.AUTH_SERVICE_TOKEN },
+              body: JSON.stringify({ id: legacy.id, email: legacy.email, password: body.password }),
+              signal: AbortSignal.timeout(8000)
+            });
+            result = await response.json().catch(() => ({}));
+          }
+        }
+        if (!response.ok) return json({ error: response.status === 401 ? "Invalid email or password." : (result.error || "Account service unavailable.") }, response.status === 401 ? 401 : response.status >= 500 ? 503 : response.status);
+        const user = result.user;
+        if (!user || typeof user.id !== "string" || typeof user.email !== "string") return json({ error: "Invalid response from account service." }, 502);
+        await env.DB.prepare("INSERT OR IGNORE INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)")
+          .bind(user.id, user.email, "external$postgres", new Date().toISOString()).run();
+        return json({ user, token: await signToken(user, env.JWT_SECRET) });
+      } catch {
+        return json({ error: "Account service unavailable. Please try again later." }, 503);
+      }
     }
-    const row = await env.DB.prepare("SELECT id, email, password_hash FROM users WHERE email = ?")
-      .bind(body.email.trim().toLowerCase()).first();
-    if (!row || !(await verifyPassword(body.password, row.password_hash))) {
-      return json({ error: "Invalid email or password." }, 401);
-    }
+    const row = await env.DB.prepare("SELECT id, email, password_hash FROM users WHERE email = ?").bind(email).first();
+    if (!row || !(await verifyPassword(body.password, row.password_hash))) return json({ error: "Invalid email or password." }, 401);
     const user = { id: row.id, email: row.email };
     return json({ user, token: await signToken(user, env.JWT_SECRET) });
   }
