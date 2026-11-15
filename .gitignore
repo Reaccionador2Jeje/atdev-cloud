@@ -7,3 +7,5 @@ storage/
 *.sqlite-shm
 *.sqlite-wal
 coverage/
+.wrangler/
+.dev.vars
